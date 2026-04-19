@@ -1,0 +1,17 @@
+[package]
+name = "ghostty-tui"
+version = "0.1.0"
+edition = "2021"
+authors = ["Daniel Gosek <daniel@ritual.net>"]
+description = "Beautiful terminal UI for managing Ghostty terminal configuration"
+license = "MIT"
+repository = "https://github.com/dan-ritual/ghostty-tui"
+readme = "README.md"
+keywords = ["ghostty", "terminal", "tui", "config", "configuration"]
+categories = ["command-line-utilities", "config"]
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
