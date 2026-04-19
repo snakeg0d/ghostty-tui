@@ -98,6 +98,8 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
                 bin_dir.join("ghostty-manager.sh"),
                 bin_dir.join("../share/ghostty-tui/ghostty-manager.sh"),
                 bin_dir.join("../scripts/ghostty-manager.sh"),
+                bin_dir.join("../../scripts/ghostty-manager.sh"),  // target/release/<bin> -> repo
+                bin_dir.join("../../../scripts/ghostty-manager.sh"), // target/release/deps/<bin>
             ] {
                 if candidate.exists() {
                     return Ok(candidate);
@@ -177,8 +179,10 @@ fn resolve_assets_dir() -> Option<PathBuf> {
     if let Ok(exe) = env::current_exe() {
         if let Some(bin_dir) = exe.parent() {
             for candidate in [
-                bin_dir.join("../assets"),
-                bin_dir.join("../share/ghostty-tui/assets"),
+                bin_dir.join("../assets"),                         // <bin>/..  (flat installed)
+                bin_dir.join("../share/ghostty-tui/assets"),       // <bin>/../share/... (Unix install)
+                bin_dir.join("../../assets"),                      // target/release/<bin> -> repo root
+                bin_dir.join("../../../assets"),                   // target/release/deps/<bin>
             ] {
                 if candidate.is_dir() {
                     return Some(candidate);
