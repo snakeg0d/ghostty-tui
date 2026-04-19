@@ -341,18 +341,8 @@ impl App {
     }
 
     fn load_current_config(&mut self) {
-        let script_path = match self.manager_script_path.to_str() {
-            Some(path) => path,
-            None => {
-                self.status_message = "Invalid manager script path".to_string();
-                return;
-            }
-        };
-
-        let cmd = format!("{} current", script_path);
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&cmd)
+        let output = Command::new(&self.manager_script_path)
+            .arg("current")
             .output();
 
         match output {
@@ -811,18 +801,20 @@ impl App {
     }
 
     fn execute_command(&mut self, cmd: &str) {
-        let script_path = match self.manager_script_path.to_str() {
-            Some(path) => path,
-            None => {
-                self.status_message = "Invalid manager script path".to_string();
+        let args = match shell_words::split(cmd) {
+            Ok(parts) if !parts.is_empty() => parts,
+            Ok(_) => {
+                self.status_message = "✗ Empty command".to_string();
+                return;
+            }
+            Err(e) => {
+                self.status_message = format!("✗ Malformed command: {}", e);
                 return;
             }
         };
 
-        let full_cmd = format!("{} {}", script_path, cmd);
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg(&full_cmd)
+        let output = Command::new(&self.manager_script_path)
+            .args(&args)
             .output();
 
         match output {
