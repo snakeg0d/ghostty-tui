@@ -91,23 +91,30 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
         }
     }
 
-    // Try in the same directory as the config file (common for dotfiles setup)
-    let config_path = get_ghostty_config_path()?;
-    if let Some(config_dir) = config_path.parent() {
-        let script_in_config = config_dir.parent()
-            .map(|p| p.join("ghostty-manager.sh"));
-        if let Some(path) = script_in_config {
-            if path.exists() {
-                return Ok(path);
+    // Try adjacent to the binary (shipped-alongside layout: <bin-dir>/../share/ghostty-tui/ghostty-manager.sh)
+    if let Ok(exe) = env::current_exe() {
+        if let Some(bin_dir) = exe.parent() {
+            for candidate in [
+                bin_dir.join("ghostty-manager.sh"),
+                bin_dir.join("../share/ghostty-tui/ghostty-manager.sh"),
+                bin_dir.join("../scripts/ghostty-manager.sh"),
+            ] {
+                if candidate.exists() {
+                    return Ok(candidate);
+                }
             }
         }
     }
 
-    // Fallback to hardcoded development path (will be replaced with bundled version in release)
-    let dev_path = PathBuf::from(env::var("HOME").unwrap_or_default())
-        .join("dev/dotfiles/ghostty/ghostty-manager.sh");
-    if dev_path.exists() {
-        return Ok(dev_path);
+    // Try in the same directory as the ghostty config (user-local setup)
+    let config_path = get_ghostty_config_path()?;
+    if let Some(config_dir) = config_path.parent() {
+        if let Some(parent) = config_dir.parent() {
+            let script_in_config = parent.join("ghostty-manager.sh");
+            if script_in_config.exists() {
+                return Ok(script_in_config);
+            }
+        }
     }
 
     Err("Could not find ghostty-manager.sh. Set GHOSTTY_MANAGER_PATH environment variable.".to_string())

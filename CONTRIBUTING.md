@@ -28,7 +28,7 @@ We welcome feature suggestions! Please:
 
 1. **Fork the repository**
    ```bash
-   git clone https://github.com/yourusername/ghostty-tui
+   git clone https://github.com/snakeg0d/ghostty-tui
    cd ghostty-tui
    ```
 
@@ -101,9 +101,9 @@ Please test on your platform and note any platform-specific issues.
 ## Development Setup
 
 ### Prerequisites
-- Rust 1.70+ (install via [rustup](https://rustup.rs/))
-- Ghostty terminal emulator
-- ghostty-manager.sh script (included or from dotfiles)
+- Rust 1.75+ (install via [rustup](https://rustup.rs/))
+- Ghostty terminal emulator (1.3.x tested)
+- `ghostty-manager.sh` script — bundled under `scripts/`
 
 ### Building
 ```bash
