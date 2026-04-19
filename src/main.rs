@@ -121,6 +121,28 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
 }
 
 // ============================================================================
+// Ghostty version check
+// ============================================================================
+
+/// Parse `ghostty --version` output.
+/// Returns `Some((major, minor))` on success, None if ghostty isn't in PATH
+/// or the output doesn't parse.
+fn ghostty_version() -> Option<(u32, u32)> {
+    let output = Command::new("ghostty").arg("--version").output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // First line is typically "Ghostty X.Y.Z"
+    let first = stdout.lines().next()?;
+    let ver = first.split_whitespace().nth(1)?;
+    let mut parts = ver.split('.');
+    let major: u32 = parts.next()?.parse().ok()?;
+    let minor: u32 = parts.next()?.parse().ok()?;
+    Some((major, minor))
+}
+
+// ============================================================================
 // Asset discovery
 // ============================================================================
 
@@ -426,7 +448,16 @@ impl App {
         let manager_script_path = get_manager_script_path()?;
 
         let (themes, themes_discovered) = discover_themes();
-        let theme_status = if themes_discovered {
+
+        let version_warn = match ghostty_version() {
+            Some((1, m)) if m < 2 => Some(format!("⚠ Ghostty 1.{} detected — some keys may no-op; 1.2+ recommended.", m)),
+            Some((0, _)) => Some("⚠ Ghostty 0.x detected — several keys may no-op; 1.2+ recommended.".to_string()),
+            _ => None,
+        };
+
+        let theme_status = if let Some(warn) = version_warn {
+            warn
+        } else if themes_discovered {
             format!("Discovered {} themes via `ghostty +list-themes`.", themes.len().saturating_sub(11))
         } else {
             "⚠ ghostty not in PATH — using fallback theme list.".to_string()
@@ -471,8 +502,10 @@ impl App {
                 "Size: 20pt".to_string(),
                 "".to_string(),
                 "-- FONT STYLE --".to_string(),
-                "Weight: Normal".to_string(),
-                "Weight: Bold".to_string(),
+                "Style: Regular".to_string(),
+                "Style: Bold".to_string(),
+                "Style: Italic".to_string(),
+                "Style: Bold Italic".to_string(),
                 "".to_string(),
                 "-- LIGATURES --".to_string(),
                 "Ligatures: On".to_string(),
@@ -870,9 +903,19 @@ impl App {
                     if option.starts_with("Size:") {
                         let size = option.split(": ").nth(1).unwrap_or("14").replace("pt", "");
                         self.execute_command(&format!("font-size {}", size));
-                    } else if option.starts_with("Weight:") {
-                        let weight = if option.contains("Bold") { "bold" } else { "normal" };
-                        self.execute_command(&format!("font-weight {}", weight));
+                    } else if option.starts_with("Style:") {
+                        // Maps to ghostty `font-style` (which governs regular/bold/italic
+                        // selection within the installed family — not a numeric weight).
+                        let style = if option.contains("Bold Italic") {
+                            "Bold Italic"
+                        } else if option.contains("Italic") {
+                            "Italic"
+                        } else if option.contains("Bold") {
+                            "Bold"
+                        } else {
+                            "Regular"
+                        };
+                        self.execute_command(&format!("font-weight \"{}\"", style));
                     } else if option.starts_with("Ligatures:") {
                         let state = if option.contains("On") { "on" } else { "off" };
                         self.execute_command(&format!("ligatures {}", state));

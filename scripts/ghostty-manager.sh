@@ -410,18 +410,29 @@ set_font_size() {
 }
 
 set_font_weight() {
-    local weight="$1"
-    # For bold, we use font-style; for normal, we remove the setting
-    if [ "$weight" = "bold" ]; then
-        if grep -q "^font-style = " "$GHOSTTY_CONFIG"; then
-            $SED_INPLACE "s/^font-style = .*/font-style = Bold/" "$GHOSTTY_CONFIG"
-        else
-            echo "font-style = Bold" >> "$GHOSTTY_CONFIG"
-        fi
-    else
+    # Maps the TUI's "Style:" labels to Ghostty's `font-style` key.
+    # Ghostty does NOT expose a numeric weight — it resolves face-name
+    # ("Regular" / "Bold" / "Italic" / "Bold Italic") against the installed
+    # family. "Regular" removes the override.
+    local style="$*"
+    case "$style" in
+        bold|Bold)                style="Bold" ;;
+        italic|Italic)            style="Italic" ;;
+        "bold italic"|"Bold Italic") style="Bold Italic" ;;
+        regular|Regular|normal|Normal|"") style="" ;;
+    esac
+
+    if [ -z "$style" ]; then
         $SED_INPLACE '/^font-style = /d' "$GHOSTTY_CONFIG"
+        echo -e "${GREEN}Font style cleared (falls back to family default)${NC}"
+    else
+        if grep -q "^font-style = " "$GHOSTTY_CONFIG"; then
+            $SED_INPLACE "s/^font-style = .*/font-style = $style/" "$GHOSTTY_CONFIG"
+        else
+            echo "font-style = $style" >> "$GHOSTTY_CONFIG"
+        fi
+        echo -e "${GREEN}Font style set to: $style${NC}"
     fi
-    echo -e "${GREEN}Font weight set to: $weight${NC}"
 }
 
 toggle_ligatures() {
