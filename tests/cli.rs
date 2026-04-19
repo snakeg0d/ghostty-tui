@@ -54,7 +54,11 @@ fn assets_path_resolves_in_repo_layout() {
         .arg("--assets-path")
         .output()
         .unwrap();
-    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(stdout.trim().ends_with("assets"), "stdout was: {}", stdout);
 }
@@ -71,7 +75,11 @@ fn install_assets_copies_into_test_home() {
         .arg("--install-assets")
         .output()
         .unwrap();
-    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
 
     let themes_dir = tmp.join(".config/ghostty/themes");
     let cursors_dir = tmp.join(".config/ghostty/shaders/cursors");
@@ -84,8 +92,16 @@ fn install_assets_copies_into_test_home() {
     let cursor_count = std::fs::read_dir(&cursors_dir).unwrap().count();
     let screen_count = std::fs::read_dir(&screen_dir).unwrap().count();
     assert_eq!(theme_count, 5, "expected 5 themes, got {}", theme_count);
-    assert_eq!(cursor_count, 9, "expected 9 cursor shaders, got {}", cursor_count);
-    assert_eq!(screen_count, 12, "expected 12 screen shaders, got {}", screen_count);
+    assert_eq!(
+        cursor_count, 9,
+        "expected 9 cursor shaders, got {}",
+        cursor_count
+    );
+    assert_eq!(
+        screen_count, 12,
+        "expected 12 screen shaders, got {}",
+        screen_count
+    );
 
     // Re-run should be idempotent (skip, not overwrite).
     let out2 = Command::new(bin())
@@ -96,7 +112,11 @@ fn install_assets_copies_into_test_home() {
         .unwrap();
     assert!(out2.status.success());
     let stdout2 = String::from_utf8_lossy(&out2.stdout);
-    assert!(stdout2.contains("Installed 0 files. Skipped 26"), "stdout2 was: {}", stdout2);
+    assert!(
+        stdout2.contains("Installed 0 files. Skipped 26"),
+        "stdout2 was: {}",
+        stdout2
+    );
 
     std::fs::remove_dir_all(&tmp).ok();
 }

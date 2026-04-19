@@ -40,11 +40,11 @@ use std::{env, io, path::PathBuf, process::Command};
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// TokyoNight color palette
-const BLUE: Color = Color::Rgb(122, 162, 247);      // Primary borders/headers
-const MAGENTA: Color = Color::Rgb(187, 154, 247);   // Highlights
-const YELLOW: Color = Color::Rgb(224, 175, 104);    // Status messages
-const BG: Color = Color::Rgb(26, 27, 38);           // Background
-const GRAY: Color = Color::Rgb(86, 95, 137);        // Inactive elements
+const BLUE: Color = Color::Rgb(122, 162, 247); // Primary borders/headers
+const MAGENTA: Color = Color::Rgb(187, 154, 247); // Highlights
+const YELLOW: Color = Color::Rgb(224, 175, 104); // Status messages
+const BG: Color = Color::Rgb(26, 27, 38); // Background
+const GRAY: Color = Color::Rgb(86, 95, 137); // Inactive elements
 
 // ============================================================================
 // Platform-Specific Configuration
@@ -98,7 +98,7 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
                 bin_dir.join("ghostty-manager.sh"),
                 bin_dir.join("../share/ghostty-tui/ghostty-manager.sh"),
                 bin_dir.join("../scripts/ghostty-manager.sh"),
-                bin_dir.join("../../scripts/ghostty-manager.sh"),  // target/release/<bin> -> repo
+                bin_dir.join("../../scripts/ghostty-manager.sh"), // target/release/<bin> -> repo
                 bin_dir.join("../../../scripts/ghostty-manager.sh"), // target/release/deps/<bin>
             ] {
                 if candidate.exists() {
@@ -119,7 +119,10 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
         }
     }
 
-    Err("Could not find ghostty-manager.sh. Set GHOSTTY_MANAGER_PATH environment variable.".to_string())
+    Err(
+        "Could not find ghostty-manager.sh. Set GHOSTTY_MANAGER_PATH environment variable."
+            .to_string(),
+    )
 }
 
 // ============================================================================
@@ -151,7 +154,10 @@ fn detect_reload_keybind() -> Option<String> {
 fn reload_hint() -> String {
     match detect_reload_keybind() {
         Some(combo) => format!("Reload Ghostty: {} (or open a new window)", combo),
-        None => "Reload: bind `keybind = super+r=reload_config` in your config, or open a new window".to_string(),
+        None => {
+            "Reload: bind `keybind = super+r=reload_config` in your config, or open a new window"
+                .to_string()
+        }
     }
 }
 
@@ -183,16 +189,31 @@ fn ghostty_version() -> Option<(u32, u32)> {
 
 /// Built-in cursor shader names, used when no on-disk asset dir is found.
 const FALLBACK_CURSOR_SHADERS: &[&str] = &[
-    "ripple_cursor", "sonic_boom_cursor", "cursor_tail", "cursor_sweep",
-    "glow", "tesla_coil", "cursor_warp", "rectangle_boom_cursor",
+    "ripple_cursor",
+    "sonic_boom_cursor",
+    "cursor_tail",
+    "cursor_sweep",
+    "glow",
+    "tesla_coil",
+    "cursor_warp",
+    "rectangle_boom_cursor",
     "ripple_rectangle_cursor",
 ];
 
 /// Built-in screen shader names, used when no on-disk asset dir is found.
 const FALLBACK_SCREEN_SHADERS: &[&str] = &[
-    "amber-glow", "bettercrt", "bloom", "drunkard", "fireworks", "glitchy",
-    "inside-the-matrix", "matrix-hallway", "retro-terminal", "starfield",
-    "tft", "water",
+    "amber-glow",
+    "bettercrt",
+    "bloom",
+    "drunkard",
+    "fireworks",
+    "glitchy",
+    "inside-the-matrix",
+    "matrix-hallway",
+    "retro-terminal",
+    "starfield",
+    "tft",
+    "water",
 ];
 
 /// Resolve the asset root directory.
@@ -212,10 +233,10 @@ fn resolve_assets_dir() -> Option<PathBuf> {
     if let Ok(exe) = env::current_exe() {
         if let Some(bin_dir) = exe.parent() {
             for candidate in [
-                bin_dir.join("../assets"),                         // <bin>/..  (flat installed)
-                bin_dir.join("../share/ghostty-tui/assets"),       // <bin>/../share/... (Unix install)
-                bin_dir.join("../../assets"),                      // target/release/<bin> -> repo root
-                bin_dir.join("../../../assets"),                   // target/release/deps/<bin>
+                bin_dir.join("../assets"),                   // <bin>/..  (flat installed)
+                bin_dir.join("../share/ghostty-tui/assets"), // <bin>/../share/... (Unix install)
+                bin_dir.join("../../assets"),                // target/release/<bin> -> repo root
+                bin_dir.join("../../../assets"),             // target/release/deps/<bin>
             ] {
                 if candidate.is_dir() {
                     return Some(candidate);
@@ -242,7 +263,9 @@ fn walk_shaders(dir: &std::path::Path) -> Vec<String> {
                 .filter_map(|e| {
                     let path = e.path();
                     if path.extension().and_then(|s| s.to_str()) == Some("glsl") {
-                        path.file_stem().and_then(|s| s.to_str()).map(str::to_string)
+                        path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .map(str::to_string)
                     } else {
                         None
                     }
@@ -280,7 +303,10 @@ fn discover_screen_shaders() -> Vec<String> {
             return found;
         }
     }
-    FALLBACK_SCREEN_SHADERS.iter().map(|s| s.to_string()).collect()
+    FALLBACK_SCREEN_SHADERS
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 /// Install bundled assets to the user's ghostty config dir.
@@ -292,16 +318,26 @@ fn discover_screen_shaders() -> Vec<String> {
 /// Does NOT overwrite existing files. Does NOT install config presets (those are
 /// always opt-in per-file, since a config preset replaces the whole config).
 fn install_assets() -> Result<(usize, usize), String> {
-    let assets = resolve_assets_dir()
-        .ok_or_else(|| "Could not locate bundled assets — set GHOSTTY_TUI_ASSETS or run from a checkout.".to_string())?;
+    let assets = resolve_assets_dir().ok_or_else(|| {
+        "Could not locate bundled assets — set GHOSTTY_TUI_ASSETS or run from a checkout."
+            .to_string()
+    })?;
 
     let home = env::var("HOME").map_err(|_| "HOME not set".to_string())?;
     let user_base = PathBuf::from(home).join(".config").join("ghostty");
 
     let mappings = [
         (assets.join("themes"), user_base.join("themes"), None),
-        (assets.join("shaders").join("cursors"), user_base.join("shaders").join("cursors"), Some("glsl")),
-        (assets.join("shaders").join("screen"),  user_base.join("shaders").join("screen"),  Some("glsl")),
+        (
+            assets.join("shaders").join("cursors"),
+            user_base.join("shaders").join("cursors"),
+            Some("glsl"),
+        ),
+        (
+            assets.join("shaders").join("screen"),
+            user_base.join("shaders").join("screen"),
+            Some("glsl"),
+        ),
     ];
 
     let mut copied = 0usize;
@@ -332,7 +368,8 @@ fn install_assets() -> Result<(usize, usize), String> {
                 skipped += 1;
                 continue;
             }
-            std::fs::copy(&path, &target).map_err(|e| format!("copy {:?} -> {:?}: {}", path, target, e))?;
+            std::fs::copy(&path, &target)
+                .map_err(|e| format!("copy {:?} -> {:?}: {}", path, target, e))?;
             copied += 1;
         }
     }
@@ -487,8 +524,13 @@ impl App {
         let (themes, themes_discovered) = discover_themes();
 
         let version_warn = match ghostty_version() {
-            Some((1, m)) if m < 2 => Some(format!("⚠ Ghostty 1.{} detected — some keys may no-op; 1.2+ recommended.", m)),
-            Some((0, _)) => Some("⚠ Ghostty 0.x detected — several keys may no-op; 1.2+ recommended.".to_string()),
+            Some((1, m)) if m < 2 => Some(format!(
+                "⚠ Ghostty 1.{} detected — some keys may no-op; 1.2+ recommended.",
+                m
+            )),
+            Some((0, _)) => Some(
+                "⚠ Ghostty 0.x detected — several keys may no-op; 1.2+ recommended.".to_string(),
+            ),
             _ => None,
         };
 
@@ -588,12 +630,49 @@ impl App {
             screen_shader_combos: vec![
                 ("None".to_string(), "Disable all screen shaders".to_string()),
                 ("crt-classic".to_string(), "tft + bettercrt".to_string()),
-                ("crt-bloom".to_string(), "tft + retro-terminal + bloom".to_string()),
-                ("drunk-retro".to_string(), "drunkard + retro-terminal + bloom".to_string()),
-                ("glitch-water".to_string(), "glitchy + bettercrt + water + bloom".to_string()),
+                (
+                    "crt-bloom".to_string(),
+                    "tft + retro-terminal + bloom".to_string(),
+                ),
+                (
+                    "drunk-retro".to_string(),
+                    "drunkard + retro-terminal + bloom".to_string(),
+                ),
+                (
+                    "glitch-water".to_string(),
+                    "glitchy + bettercrt + water + bloom".to_string(),
+                ),
             ],
 
-            appearance_options: vec!["── PRESETS ──","Default (Liquid Glass)","Solid (No transparency)","── OPACITY ──","Opacity: 0.7 (Light)","Opacity: 0.8","Opacity: 0.9","Opacity: 0.95 (Current)","Opacity: 1.0 (Solid)","── BLUR ──","Blur: 0 (Off)","Blur: 10 (Subtle)","Blur: 20 (Medium)","Blur: 40 (Strong)","── PADDING X ──","Padding X: 0","Padding X: 5","Padding X: 10","Padding X: 20","── PADDING Y ──","Padding Y: 0","Padding Y: 5","Padding Y: 10","Padding Y: 20"].iter().map(|s| s.to_string()).collect(),
+            appearance_options: vec![
+                "── PRESETS ──",
+                "Default (Liquid Glass)",
+                "Solid (No transparency)",
+                "── OPACITY ──",
+                "Opacity: 0.7 (Light)",
+                "Opacity: 0.8",
+                "Opacity: 0.9",
+                "Opacity: 0.95 (Current)",
+                "Opacity: 1.0 (Solid)",
+                "── BLUR ──",
+                "Blur: 0 (Off)",
+                "Blur: 10 (Subtle)",
+                "Blur: 20 (Medium)",
+                "Blur: 40 (Strong)",
+                "── PADDING X ──",
+                "Padding X: 0",
+                "Padding X: 5",
+                "Padding X: 10",
+                "Padding X: 20",
+                "── PADDING Y ──",
+                "Padding Y: 0",
+                "Padding Y: 5",
+                "Padding Y: 10",
+                "Padding Y: 20",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
 
             mouse_options: vec![
                 "-- MOUSE BEHAVIOR --".to_string(),
@@ -615,11 +694,88 @@ impl App {
                 "Focus Follows Mouse: Off".to_string(),
                 "Focus Follows Mouse: On".to_string(),
             ],
-            clipboard_options: vec!["-- CLIPBOARD READ --","Read: Ask (Prompt)","Read: Allow","Read: Deny","","-- CLIPBOARD WRITE --","Write: Ask (Prompt)","Write: Allow","Write: Deny","","-- CLIPBOARD OPTIONS --","Trim Trailing Spaces: On","Trim Trailing Spaces: Off","","-- SECURITY --","Paste Protection: On","Paste Protection: Off"].iter().map(|s| s.to_string()).collect(),
+            clipboard_options: vec![
+                "-- CLIPBOARD READ --",
+                "Read: Ask (Prompt)",
+                "Read: Allow",
+                "Read: Deny",
+                "",
+                "-- CLIPBOARD WRITE --",
+                "Write: Ask (Prompt)",
+                "Write: Allow",
+                "Write: Deny",
+                "",
+                "-- CLIPBOARD OPTIONS --",
+                "Trim Trailing Spaces: On",
+                "Trim Trailing Spaces: Off",
+                "",
+                "-- SECURITY --",
+                "Paste Protection: On",
+                "Paste Protection: Off",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
 
-            window_options: vec!["-- SIZE PRESETS --".to_string(),"Size: Small (80x24)".to_string(),"Size: Medium (100x30)".to_string(),"Size: Large (120x40)".to_string(),"Size: Ultrawide (200x50)".to_string(),"Size: Gostty (100x50)".to_string(),"".to_string(),"-- WINDOW DECORATIONS --".to_string(),"Decorations: Auto".to_string(),"Decorations: None".to_string(),"Decorations: Client".to_string(),"Decorations: Server".to_string(),"".to_string(),"-- TAB BAR --".to_string(),"Tab Bar: Auto".to_string(),"Tab Bar: Always".to_string(),"Tab Bar: Never".to_string(),"".to_string(),"-- DISPLAY --".to_string(),"VSync: On".to_string(),"VSync: Off".to_string(),"Fullscreen: On".to_string(),"Fullscreen: Off".to_string(),"".to_string(),"-- STATE --".to_string(),"Save State: Default".to_string(),"Save State: Always".to_string(),"Save State: Never".to_string()],
+            window_options: vec![
+                "-- SIZE PRESETS --".to_string(),
+                "Size: Small (80x24)".to_string(),
+                "Size: Medium (100x30)".to_string(),
+                "Size: Large (120x40)".to_string(),
+                "Size: Ultrawide (200x50)".to_string(),
+                "Size: Gostty (100x50)".to_string(),
+                "".to_string(),
+                "-- WINDOW DECORATIONS --".to_string(),
+                "Decorations: Auto".to_string(),
+                "Decorations: None".to_string(),
+                "Decorations: Client".to_string(),
+                "Decorations: Server".to_string(),
+                "".to_string(),
+                "-- TAB BAR --".to_string(),
+                "Tab Bar: Auto".to_string(),
+                "Tab Bar: Always".to_string(),
+                "Tab Bar: Never".to_string(),
+                "".to_string(),
+                "-- DISPLAY --".to_string(),
+                "VSync: On".to_string(),
+                "VSync: Off".to_string(),
+                "Fullscreen: On".to_string(),
+                "Fullscreen: Off".to_string(),
+                "".to_string(),
+                "-- STATE --".to_string(),
+                "Save State: Default".to_string(),
+                "Save State: Always".to_string(),
+                "Save State: Never".to_string(),
+            ],
 
-            shell_options: vec!["-- SHELL INTEGRATION --","Integration: Detect (Auto)","Integration: Bash","Integration: Fish","Integration: Zsh","Integration: Elvish","Integration: None","","-- WORKING DIRECTORY --","Start In: Home","Start In: Inherit","","-- CLOSE BEHAVIOR --","Confirm Close: On","Confirm Close: Off","Confirm Close: Always","","-- SCROLLBACK --","Scrollback: 1,000 lines","Scrollback: 5,000 lines","Scrollback: 10,000 lines","Scrollback: 50,000 lines","Scrollback: 100,000 lines"].iter().map(|s| s.to_string()).collect(),
+            shell_options: vec![
+                "-- SHELL INTEGRATION --",
+                "Integration: Detect (Auto)",
+                "Integration: Bash",
+                "Integration: Fish",
+                "Integration: Zsh",
+                "Integration: Elvish",
+                "Integration: None",
+                "",
+                "-- WORKING DIRECTORY --",
+                "Start In: Home",
+                "Start In: Inherit",
+                "",
+                "-- CLOSE BEHAVIOR --",
+                "Confirm Close: On",
+                "Confirm Close: Off",
+                "Confirm Close: Always",
+                "",
+                "-- SCROLLBACK --",
+                "Scrollback: 1,000 lines",
+                "Scrollback: 5,000 lines",
+                "Scrollback: 10,000 lines",
+                "Scrollback: 50,000 lines",
+                "Scrollback: 100,000 lines",
+            ]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
 
             current_config: String::new(),
             status_message: theme_status,
@@ -715,7 +871,13 @@ impl App {
                 let len = self.font_options.len();
                 if len > 0 {
                     let i = match self.font_state.selected() {
-                        Some(i) => if i >= len - 1 { 0 } else { i + 1 },
+                        Some(i) => {
+                            if i >= len - 1 {
+                                0
+                            } else {
+                                i + 1
+                            }
+                        }
                         None => 0,
                     };
                     self.font_state.select(Some(i));
@@ -725,7 +887,13 @@ impl App {
                 let len = self.cursor_options.len();
                 if len > 0 {
                     let i = match self.cursor_state.selected() {
-                        Some(i) => if i >= len - 1 { 0 } else { i + 1 },
+                        Some(i) => {
+                            if i >= len - 1 {
+                                0
+                            } else {
+                                i + 1
+                            }
+                        }
                         None => 0,
                     };
                     self.cursor_state.select(Some(i));
@@ -734,20 +902,30 @@ impl App {
             Tab::CursorShaders => {
                 let len = self.cursor_shaders.len();
                 let i = match self.cursor_shader_state.selected() {
-                    Some(i) => if i >= len - 1 { 0 } else { i + 1 },
+                    Some(i) => {
+                        if i >= len - 1 {
+                            0
+                        } else {
+                            i + 1
+                        }
+                    }
                     None => 0,
                 };
                 self.cursor_shader_state.select(Some(i));
             }
             Tab::ScreenShaders => {
                 // Total items including separators: 1 (header) + combos + 1 (empty) + 1 (header) + shaders
-                let total_len = 1 + self.screen_shader_combos.len() + 1 + 1 + self.screen_shaders.len();
+                let total_len =
+                    1 + self.screen_shader_combos.len() + 1 + 1 + self.screen_shaders.len();
                 let i = match self.screen_shader_state.selected() {
                     Some(i) => {
                         let mut next = if i >= total_len - 1 { 0 } else { i + 1 };
                         // Skip separators at positions: 0 (first header), combos_len+1 (empty), combos_len+2 (second header)
                         loop {
-                            if next == 0 || next == self.screen_shader_combos.len() + 1 || next == self.screen_shader_combos.len() + 2 {
+                            if next == 0
+                                || next == self.screen_shader_combos.len() + 1
+                                || next == self.screen_shader_combos.len() + 2
+                            {
                                 next = if next >= total_len - 1 { 0 } else { next + 1 };
                             } else {
                                 break;
@@ -778,7 +956,13 @@ impl App {
                 let len = self.mouse_options.len();
                 if len > 0 {
                     let i = match self.mouse_state.selected() {
-                        Some(i) => if i >= len - 1 { 0 } else { i + 1 },
+                        Some(i) => {
+                            if i >= len - 1 {
+                                0
+                            } else {
+                                i + 1
+                            }
+                        }
                         None => 0,
                     };
                     self.mouse_state.select(Some(i));
@@ -786,12 +970,30 @@ impl App {
             }
             Tab::Clipboard => {
                 let len = self.clipboard_options.len();
-                if len > 0 { self.clipboard_state.select(Some(match self.clipboard_state.selected() { Some(i) => if i >= len - 1 { 0 } else { i + 1 }, None => 0 })); }
+                if len > 0 {
+                    self.clipboard_state
+                        .select(Some(match self.clipboard_state.selected() {
+                            Some(i) => {
+                                if i >= len - 1 {
+                                    0
+                                } else {
+                                    i + 1
+                                }
+                            }
+                            None => 0,
+                        }));
+                }
             }
             Tab::Window => {
                 let len = self.window_options.len();
                 let i = match self.window_state.selected() {
-                    Some(i) => if i >= len - 1 { 0 } else { i + 1 },
+                    Some(i) => {
+                        if i >= len - 1 {
+                            0
+                        } else {
+                            i + 1
+                        }
+                    }
                     None => 0,
                 };
                 self.window_state.select(Some(i));
@@ -800,7 +1002,13 @@ impl App {
                 let len = self.shell_options.len();
                 if len > 0 {
                     let i = match self.shell_state.selected() {
-                        Some(i) => if i >= len - 1 { 0 } else { i + 1 },
+                        Some(i) => {
+                            if i >= len - 1 {
+                                0
+                            } else {
+                                i + 1
+                            }
+                        }
                         None => 0,
                     };
                     self.shell_state.select(Some(i));
@@ -831,7 +1039,13 @@ impl App {
                 let len = self.font_options.len();
                 if len > 0 {
                     let i = match self.font_state.selected() {
-                        Some(i) => if i == 0 { len - 1 } else { i - 1 },
+                        Some(i) => {
+                            if i == 0 {
+                                len - 1
+                            } else {
+                                i - 1
+                            }
+                        }
                         None => 0,
                     };
                     self.font_state.select(Some(i));
@@ -841,7 +1055,13 @@ impl App {
                 let len = self.cursor_options.len();
                 if len > 0 {
                     let i = match self.cursor_state.selected() {
-                        Some(i) => if i == 0 { len - 1 } else { i - 1 },
+                        Some(i) => {
+                            if i == 0 {
+                                len - 1
+                            } else {
+                                i - 1
+                            }
+                        }
                         None => 0,
                     };
                     self.cursor_state.select(Some(i));
@@ -850,20 +1070,30 @@ impl App {
             Tab::CursorShaders => {
                 let len = self.cursor_shaders.len();
                 let i = match self.cursor_shader_state.selected() {
-                    Some(i) => if i == 0 { len - 1 } else { i - 1 },
+                    Some(i) => {
+                        if i == 0 {
+                            len - 1
+                        } else {
+                            i - 1
+                        }
+                    }
                     None => 0,
                 };
                 self.cursor_shader_state.select(Some(i));
             }
             Tab::ScreenShaders => {
                 // Total items including separators
-                let total_len = 1 + self.screen_shader_combos.len() + 1 + 1 + self.screen_shaders.len();
+                let total_len =
+                    1 + self.screen_shader_combos.len() + 1 + 1 + self.screen_shaders.len();
                 let i = match self.screen_shader_state.selected() {
                     Some(i) => {
                         let mut prev = if i == 0 { total_len - 1 } else { i - 1 };
                         // Skip separators
                         loop {
-                            if prev == 0 || prev == self.screen_shader_combos.len() + 1 || prev == self.screen_shader_combos.len() + 2 {
+                            if prev == 0
+                                || prev == self.screen_shader_combos.len() + 1
+                                || prev == self.screen_shader_combos.len() + 2
+                            {
                                 prev = if prev == 0 { total_len - 1 } else { prev - 1 };
                             } else {
                                 break;
@@ -894,7 +1124,13 @@ impl App {
                 let len = self.mouse_options.len();
                 if len > 0 {
                     let i = match self.mouse_state.selected() {
-                        Some(i) => if i == 0 { len - 1 } else { i - 1 },
+                        Some(i) => {
+                            if i == 0 {
+                                len - 1
+                            } else {
+                                i - 1
+                            }
+                        }
                         None => 0,
                     };
                     self.mouse_state.select(Some(i));
@@ -902,12 +1138,30 @@ impl App {
             }
             Tab::Clipboard => {
                 let len = self.clipboard_options.len();
-                if len > 0 { self.clipboard_state.select(Some(match self.clipboard_state.selected() { Some(i) => if i == 0 { len - 1 } else { i - 1 }, None => 0 })); }
+                if len > 0 {
+                    self.clipboard_state
+                        .select(Some(match self.clipboard_state.selected() {
+                            Some(i) => {
+                                if i == 0 {
+                                    len - 1
+                                } else {
+                                    i - 1
+                                }
+                            }
+                            None => 0,
+                        }));
+                }
             }
             Tab::Window => {
                 let len = self.window_options.len();
                 let i = match self.window_state.selected() {
-                    Some(i) => if i == 0 { len - 1 } else { i - 1 },
+                    Some(i) => {
+                        if i == 0 {
+                            len - 1
+                        } else {
+                            i - 1
+                        }
+                    }
                     None => 0,
                 };
                 self.window_state.select(Some(i));
@@ -916,7 +1170,13 @@ impl App {
                 let len = self.shell_options.len();
                 if len > 0 {
                     let i = match self.shell_state.selected() {
-                        Some(i) => if i == 0 { len - 1 } else { i - 1 },
+                        Some(i) => {
+                            if i == 0 {
+                                len - 1
+                            } else {
+                                i - 1
+                            }
+                        }
                         None => 0,
                     };
                     self.shell_state.select(Some(i));
@@ -931,7 +1191,9 @@ impl App {
             Tab::Themes => {
                 if let Some(i) = self.theme_state.selected() {
                     let theme = &self.themes[i];
-                    if theme.starts_with("--") || theme.is_empty() { return; }
+                    if theme.starts_with("--") || theme.is_empty() {
+                        return;
+                    }
                     self.execute_command(&format!("theme \"{}\"", theme));
                 }
             }
@@ -975,10 +1237,15 @@ impl App {
                     }
 
                     if option.starts_with("Style:") {
-                        let style = if option.contains("Block Hollow") { "block_hollow" }
-                            else if option.contains("Block") { "block" }
-                            else if option.contains("Bar") { "bar" }
-                            else { "underline" };
+                        let style = if option.contains("Block Hollow") {
+                            "block_hollow"
+                        } else if option.contains("Block") {
+                            "block"
+                        } else if option.contains("Bar") {
+                            "bar"
+                        } else {
+                            "underline"
+                        };
                         self.execute_command(&format!("cursor-style {}", style));
                     } else if option.starts_with("Color:") {
                         if option.contains("Match Theme") {
@@ -988,10 +1255,20 @@ impl App {
                             self.execute_command(&format!("cursor-color {}", color));
                         }
                     } else if option.starts_with("Blink:") {
-                        let state = if option.contains("On") { "true" } else { "false" };
+                        let state = if option.contains("On") {
+                            "true"
+                        } else {
+                            "false"
+                        };
                         self.execute_command(&format!("cursor-blink {}", state));
                     } else if option.starts_with("Opacity:") {
-                        let opacity = option.split(": ").nth(1).unwrap_or("1.0").split(" ").next().unwrap_or("1.0");
+                        let opacity = option
+                            .split(": ")
+                            .nth(1)
+                            .unwrap_or("1.0")
+                            .split(" ")
+                            .next()
+                            .unwrap_or("1.0");
                         self.execute_command(&format!("cursor-opacity {}", opacity));
                     }
                 }
@@ -1034,14 +1311,36 @@ impl App {
             Tab::Appearance => {
                 if let Some(i) = self.appearance_state.selected() {
                     let option = &self.appearance_options[i];
-                    if option.starts_with("──") { return; }
-                    if option == "Default (Liquid Glass)" { self.execute_command("appearance default"); }
-                    else if option == "Solid (No transparency)" { self.execute_command("appearance solid"); }
-                    else if option.starts_with("Opacity:") {
-                        let opacity = if option.contains("0.7") { "0.7" } else if option.contains("0.8") { "0.8" } else if option.contains("0.9") { "0.9" } else if option.contains("0.95") { "0.95" } else { "1.0" };
+                    if option.starts_with("──") {
+                        return;
+                    }
+                    if option == "Default (Liquid Glass)" {
+                        self.execute_command("appearance default");
+                    } else if option == "Solid (No transparency)" {
+                        self.execute_command("appearance solid");
+                    } else if option.starts_with("Opacity:") {
+                        let opacity = if option.contains("0.7") {
+                            "0.7"
+                        } else if option.contains("0.8") {
+                            "0.8"
+                        } else if option.contains("0.9") {
+                            "0.9"
+                        } else if option.contains("0.95") {
+                            "0.95"
+                        } else {
+                            "1.0"
+                        };
                         self.execute_command(&format!("opacity \"{}\"", opacity));
                     } else if option.starts_with("Blur:") {
-                        let blur = if option.contains("0 ") { "0" } else if option.contains("10") { "10" } else if option.contains("20") { "20" } else { "40" };
+                        let blur = if option.contains("0 ") {
+                            "0"
+                        } else if option.contains("10") {
+                            "10"
+                        } else if option.contains("20") {
+                            "20"
+                        } else {
+                            "40"
+                        };
                         self.execute_command(&format!("blur \"{}\"", blur));
                     } else if option.starts_with("Padding X:") {
                         let padding = option.split(": ").nth(1).unwrap_or("0");
@@ -1060,18 +1359,36 @@ impl App {
                     }
 
                     if option.starts_with("Hide While Typing:") {
-                        let state = if option.contains("On") { "true" } else { "false" };
+                        let state = if option.contains("On") {
+                            "true"
+                        } else {
+                            "false"
+                        };
                         self.execute_command(&format!("mouse-hide {}", state));
                     } else if option.starts_with("Scroll Multiplier:") {
-                        let mult = option.split(": ").nth(1).unwrap_or("1.0").split(" ").next().unwrap_or("1.0");
+                        let mult = option
+                            .split(": ")
+                            .nth(1)
+                            .unwrap_or("1.0")
+                            .split(" ")
+                            .next()
+                            .unwrap_or("1.0");
                         self.execute_command(&format!("scroll-multiplier {}", mult));
                     } else if option.starts_with("Copy on Select:") {
-                        let mode = if option.contains("Off") { "false" }
-                            else if option.contains("Clipboard") { "clipboard" }
-                            else { "true" };
+                        let mode = if option.contains("Off") {
+                            "false"
+                        } else if option.contains("Clipboard") {
+                            "clipboard"
+                        } else {
+                            "true"
+                        };
                         self.execute_command(&format!("copy-on-select {}", mode));
                     } else if option.starts_with("Focus Follows Mouse:") {
-                        let state = if option.contains("On") { "true" } else { "false" };
+                        let state = if option.contains("On") {
+                            "true"
+                        } else {
+                            "false"
+                        };
                         self.execute_command(&format!("focus-follows-mouse {}", state));
                     }
                 }
@@ -1079,32 +1396,153 @@ impl App {
             Tab::Clipboard => {
                 if let Some(i) = self.clipboard_state.selected() {
                     let o = &self.clipboard_options[i];
-                    if o.starts_with("--") || o.is_empty() { return; }
-                    if o.starts_with("Read:") { self.execute_command(&format!("clipboard-read {}", if o.contains("Ask") { "ask" } else if o.contains("Allow") { "allow" } else { "deny" })); }
-                    else if o.starts_with("Write:") { self.execute_command(&format!("clipboard-write {}", if o.contains("Ask") { "ask" } else if o.contains("Allow") { "allow" } else { "deny" })); }
-                    else if o.starts_with("Trim") { self.execute_command(&format!("clipboard-trim {}", if o.contains("On") { "true" } else { "false" })); }
-                    else if o.starts_with("Paste") { self.execute_command(&format!("paste-protection {}", if o.contains("On") { "true" } else { "false" })); }
+                    if o.starts_with("--") || o.is_empty() {
+                        return;
+                    }
+                    if o.starts_with("Read:") {
+                        self.execute_command(&format!(
+                            "clipboard-read {}",
+                            if o.contains("Ask") {
+                                "ask"
+                            } else if o.contains("Allow") {
+                                "allow"
+                            } else {
+                                "deny"
+                            }
+                        ));
+                    } else if o.starts_with("Write:") {
+                        self.execute_command(&format!(
+                            "clipboard-write {}",
+                            if o.contains("Ask") {
+                                "ask"
+                            } else if o.contains("Allow") {
+                                "allow"
+                            } else {
+                                "deny"
+                            }
+                        ));
+                    } else if o.starts_with("Trim") {
+                        self.execute_command(&format!(
+                            "clipboard-trim {}",
+                            if o.contains("On") { "true" } else { "false" }
+                        ));
+                    } else if o.starts_with("Paste") {
+                        self.execute_command(&format!(
+                            "paste-protection {}",
+                            if o.contains("On") { "true" } else { "false" }
+                        ));
+                    }
                 }
             }
             Tab::Window => {
                 if let Some(i) = self.window_state.selected() {
                     let o = &self.window_options[i];
-                    if o.starts_with("Size:") { let s = if o.contains("Small") { "small" } else if o.contains("Medium") { "medium" } else if o.contains("Large") { "large" } else if o.contains("Ultrawide") { "ultrawide" } else { "gostty" }; self.execute_command(&format!("size \"{}\"", s)); }
-                    else if o.starts_with("Decorations:") { let d = if o.contains("None") { "none" } else if o.contains("Client") { "client" } else if o.contains("Server") { "server" } else { "auto" }; self.execute_command(&format!("window-decoration {}", d)); }
-                    else if o.starts_with("Tab Bar:") { let t = if o.contains("Always") { "top" } else if o.contains("Never") { "hidden" } else { "auto" }; self.execute_command(&format!("tab-bar {}", t)); }
-                    else if o.starts_with("VSync:") { self.execute_command(&format!("vsync {}", if o.contains("On") { "true" } else { "false" })); }
-                    else if o.starts_with("Fullscreen:") { self.execute_command(&format!("fullscreen {}", if o.contains("On") { "true" } else { "false" })); }
-                    else if o.starts_with("Save State:") { let s = if o.contains("Always") { "always" } else if o.contains("Never") { "never" } else { "default" }; self.execute_command(&format!("save-state {}", s)); }
+                    if o.starts_with("Size:") {
+                        let s = if o.contains("Small") {
+                            "small"
+                        } else if o.contains("Medium") {
+                            "medium"
+                        } else if o.contains("Large") {
+                            "large"
+                        } else if o.contains("Ultrawide") {
+                            "ultrawide"
+                        } else {
+                            "gostty"
+                        };
+                        self.execute_command(&format!("size \"{}\"", s));
+                    } else if o.starts_with("Decorations:") {
+                        let d = if o.contains("None") {
+                            "none"
+                        } else if o.contains("Client") {
+                            "client"
+                        } else if o.contains("Server") {
+                            "server"
+                        } else {
+                            "auto"
+                        };
+                        self.execute_command(&format!("window-decoration {}", d));
+                    } else if o.starts_with("Tab Bar:") {
+                        let t = if o.contains("Always") {
+                            "top"
+                        } else if o.contains("Never") {
+                            "hidden"
+                        } else {
+                            "auto"
+                        };
+                        self.execute_command(&format!("tab-bar {}", t));
+                    } else if o.starts_with("VSync:") {
+                        self.execute_command(&format!(
+                            "vsync {}",
+                            if o.contains("On") { "true" } else { "false" }
+                        ));
+                    } else if o.starts_with("Fullscreen:") {
+                        self.execute_command(&format!(
+                            "fullscreen {}",
+                            if o.contains("On") { "true" } else { "false" }
+                        ));
+                    } else if o.starts_with("Save State:") {
+                        let s = if o.contains("Always") {
+                            "always"
+                        } else if o.contains("Never") {
+                            "never"
+                        } else {
+                            "default"
+                        };
+                        self.execute_command(&format!("save-state {}", s));
+                    }
                 }
             }
             Tab::Shell => {
                 if let Some(i) = self.shell_state.selected() {
                     let o = &self.shell_options[i];
-                    if o.starts_with("--") || o.is_empty() { return; }
-                    if o.starts_with("Integration:") { let m = if o.contains("Detect") { "detect" } else if o.contains("Bash") { "bash" } else if o.contains("Fish") { "fish" } else if o.contains("Zsh") { "zsh" } else if o.contains("Elvish") { "elvish" } else { "none" }; self.execute_command(&format!("shell-integration {}", m)); }
-                    else if o.starts_with("Start In:") { let d = if o.contains("Home") { "home" } else { "inherit" }; self.execute_command(&format!("working-directory {}", d)); }
-                    else if o.starts_with("Confirm Close:") { let c = if o.contains("Always") { "always" } else if o.contains("Off") { "false" } else { "true" }; self.execute_command(&format!("confirm-close {}", c)); }
-                    else if o.starts_with("Scrollback:") { let lines = if o.contains("1,000") { "1000" } else if o.contains("5,000") { "5000" } else if o.contains("10,000") { "10000" } else if o.contains("50,000") { "50000" } else { "100000" }; self.execute_command(&format!("scrollback {}", lines)); }
+                    if o.starts_with("--") || o.is_empty() {
+                        return;
+                    }
+                    if o.starts_with("Integration:") {
+                        let m = if o.contains("Detect") {
+                            "detect"
+                        } else if o.contains("Bash") {
+                            "bash"
+                        } else if o.contains("Fish") {
+                            "fish"
+                        } else if o.contains("Zsh") {
+                            "zsh"
+                        } else if o.contains("Elvish") {
+                            "elvish"
+                        } else {
+                            "none"
+                        };
+                        self.execute_command(&format!("shell-integration {}", m));
+                    } else if o.starts_with("Start In:") {
+                        let d = if o.contains("Home") {
+                            "home"
+                        } else {
+                            "inherit"
+                        };
+                        self.execute_command(&format!("working-directory {}", d));
+                    } else if o.starts_with("Confirm Close:") {
+                        let c = if o.contains("Always") {
+                            "always"
+                        } else if o.contains("Off") {
+                            "false"
+                        } else {
+                            "true"
+                        };
+                        self.execute_command(&format!("confirm-close {}", c));
+                    } else if o.starts_with("Scrollback:") {
+                        let lines = if o.contains("1,000") {
+                            "1000"
+                        } else if o.contains("5,000") {
+                            "5000"
+                        } else if o.contains("10,000") {
+                            "10000"
+                        } else if o.contains("50,000") {
+                            "50000"
+                        } else {
+                            "100000"
+                        };
+                        self.execute_command(&format!("scrollback {}", lines));
+                    }
                 }
             }
             Tab::Config => {}
@@ -1124,9 +1562,7 @@ impl App {
             }
         };
 
-        let output = Command::new(&self.manager_script_path)
-            .args(&args)
-            .output();
+        let output = Command::new(&self.manager_script_path).args(&args).output();
 
         match output {
             Ok(output) if output.status.success() => {
@@ -1163,43 +1599,42 @@ fn main() -> Result<(), io::Error> {
                 println!("ghostty-tui v{}", VERSION);
                 return Ok(());
             }
-            "--config-path" => {
-                match get_ghostty_config_path() {
-                    Ok(path) => {
-                        println!("{}", path.display());
-                        return Ok(());
-                    }
-                    Err(e) => {
-                        eprintln!("Error: {}", e);
-                        std::process::exit(1);
-                    }
+            "--config-path" => match get_ghostty_config_path() {
+                Ok(path) => {
+                    println!("{}", path.display());
+                    return Ok(());
                 }
-            }
-            "--install-assets" => {
-                match install_assets() {
-                    Ok((copied, skipped)) => {
-                        println!("Installed {} files. Skipped {} that already existed.", copied, skipped);
-                        println!("Install dir: ~/.config/ghostty/{{themes,shaders/{{cursors,screen}}}}");
-                        return Ok(());
-                    }
-                    Err(e) => {
-                        eprintln!("install-assets failed: {}", e);
-                        std::process::exit(1);
-                    }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1);
                 }
-            }
-            "--assets-path" => {
-                match resolve_assets_dir() {
-                    Some(p) => {
-                        println!("{}", p.display());
-                        return Ok(());
-                    }
-                    None => {
-                        eprintln!("No assets directory resolved. Set GHOSTTY_TUI_ASSETS.");
-                        std::process::exit(1);
-                    }
+            },
+            "--install-assets" => match install_assets() {
+                Ok((copied, skipped)) => {
+                    println!(
+                        "Installed {} files. Skipped {} that already existed.",
+                        copied, skipped
+                    );
+                    println!(
+                        "Install dir: ~/.config/ghostty/{{themes,shaders/{{cursors,screen}}}}"
+                    );
+                    return Ok(());
                 }
-            }
+                Err(e) => {
+                    eprintln!("install-assets failed: {}", e);
+                    std::process::exit(1);
+                }
+            },
+            "--assets-path" => match resolve_assets_dir() {
+                Some(p) => {
+                    println!("{}", p.display());
+                    return Ok(());
+                }
+                None => {
+                    eprintln!("No assets directory resolved. Set GHOSTTY_TUI_ASSETS.");
+                    std::process::exit(1);
+                }
+            },
             _ => {
                 eprintln!("Unknown argument: {}", args[1]);
                 eprintln!("Use --help for usage information");
@@ -1258,7 +1693,9 @@ fn print_help() {
     println!();
     println!("ENVIRONMENT VARIABLES:");
     println!("    GHOSTTY_MANAGER_PATH    Path to ghostty-manager.sh script");
-    println!("    GHOSTTY_TUI_ASSETS      Path to the ghostty-tui assets dir (themes/shaders/configs)");
+    println!(
+        "    GHOSTTY_TUI_ASSETS      Path to the ghostty-tui assets dir (themes/shaders/configs)"
+    );
     println!("    GHOSTTY_THEMES_DIR      Override user themes directory (default ~/.config/ghostty/themes)");
     println!("    GHOSTTY_CONFIG_PATH     Override active Ghostty config path");
     println!();
@@ -1313,10 +1750,10 @@ fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Length(3),  // Tabs
-            Constraint::Min(0),     // Content
-            Constraint::Length(3),  // Status
+            Constraint::Length(3), // Header
+            Constraint::Length(3), // Tabs
+            Constraint::Min(0),    // Content
+            Constraint::Length(3), // Status
         ])
         .split(f.area());
 
@@ -1328,33 +1765,102 @@ fn ui(f: &mut Frame, app: &mut App) {
 
     // Tabs
     let tabs_text = vec![
-        Span::styled("1", Style::default().fg(if app.tab == Tab::Themes { MAGENTA } else { GRAY })),
+        Span::styled(
+            "1",
+            Style::default().fg(if app.tab == Tab::Themes {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" Theme  "),
-        Span::styled("2", Style::default().fg(if app.tab == Tab::Font { MAGENTA } else { GRAY })),
+        Span::styled(
+            "2",
+            Style::default().fg(if app.tab == Tab::Font { MAGENTA } else { GRAY }),
+        ),
         Span::raw(" Font  "),
-        Span::styled("3", Style::default().fg(if app.tab == Tab::Cursor { MAGENTA } else { GRAY })),
+        Span::styled(
+            "3",
+            Style::default().fg(if app.tab == Tab::Cursor {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" Cursor  "),
-        Span::styled("4", Style::default().fg(if app.tab == Tab::CursorShaders { MAGENTA } else { GRAY })),
+        Span::styled(
+            "4",
+            Style::default().fg(if app.tab == Tab::CursorShaders {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" CFX  "),
-        Span::styled("5", Style::default().fg(if app.tab == Tab::ScreenShaders { MAGENTA } else { GRAY })),
+        Span::styled(
+            "5",
+            Style::default().fg(if app.tab == Tab::ScreenShaders {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" SFX  "),
-        Span::styled("6", Style::default().fg(if app.tab == Tab::Appearance { MAGENTA } else { GRAY })),
+        Span::styled(
+            "6",
+            Style::default().fg(if app.tab == Tab::Appearance {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" Look  "),
-        Span::styled("7", Style::default().fg(if app.tab == Tab::Mouse { MAGENTA } else { GRAY })),
+        Span::styled(
+            "7",
+            Style::default().fg(if app.tab == Tab::Mouse { MAGENTA } else { GRAY }),
+        ),
         Span::raw(" Mouse  "),
-        Span::styled("8", Style::default().fg(if app.tab == Tab::Clipboard { MAGENTA } else { GRAY })),
+        Span::styled(
+            "8",
+            Style::default().fg(if app.tab == Tab::Clipboard {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" Clip  "),
-        Span::styled("9", Style::default().fg(if app.tab == Tab::Window { MAGENTA } else { GRAY })),
+        Span::styled(
+            "9",
+            Style::default().fg(if app.tab == Tab::Window {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" Win  "),
-        Span::styled("10", Style::default().fg(if app.tab == Tab::Shell { MAGENTA } else { GRAY })),
+        Span::styled(
+            "10",
+            Style::default().fg(if app.tab == Tab::Shell { MAGENTA } else { GRAY }),
+        ),
         Span::raw(" Shell  "),
-        Span::styled("11", Style::default().fg(if app.tab == Tab::Config { MAGENTA } else { GRAY })),
+        Span::styled(
+            "11",
+            Style::default().fg(if app.tab == Tab::Config {
+                MAGENTA
+            } else {
+                GRAY
+            }),
+        ),
         Span::raw(" Cfg"),
     ];
 
     let tabs = Paragraph::new(Line::from(tabs_text))
         .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::BOTTOM).border_style(Style::default().fg(BLUE)));
+        .block(
+            Block::default()
+                .borders(Borders::BOTTOM)
+                .border_style(Style::default().fg(BLUE)),
+        );
     f.render_widget(tabs, chunks[1]);
 
     // Content
@@ -1375,17 +1881,47 @@ fn ui(f: &mut Frame, app: &mut App) {
     // Status bar
     let status = Paragraph::new(app.status_message.as_str())
         .style(Style::default().fg(YELLOW))
-        .block(Block::default().borders(Borders::TOP).border_style(Style::default().fg(BLUE)));
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(BLUE)),
+        );
     f.render_widget(status, chunks[3]);
 }
 
 fn render_themes(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.themes.iter().map(|t| ListItem::new(t.as_str()).style(if t.starts_with("--") { Style::default().fg(YELLOW).bold() } else if t.is_empty() { Style::default() } else { Style::default().fg(Color::White) })).collect();
-    f.render_stateful_widget(List::new(items).block(Block::default().title(" 🎨 THEMES ").title_style(Style::default().fg(MAGENTA).bold()).borders(Borders::ALL).border_style(Style::default().fg(BLUE))).highlight_style(Style::default().bg(MAGENTA).fg(BG).bold()).highlight_symbol("▶ "), area, &mut app.theme_state);
+    let items: Vec<ListItem> = app
+        .themes
+        .iter()
+        .map(|t| {
+            ListItem::new(t.as_str()).style(if t.starts_with("--") {
+                Style::default().fg(YELLOW).bold()
+            } else if t.is_empty() {
+                Style::default()
+            } else {
+                Style::default().fg(Color::White)
+            })
+        })
+        .collect();
+    f.render_stateful_widget(
+        List::new(items)
+            .block(
+                Block::default()
+                    .title(" 🎨 THEMES ")
+                    .title_style(Style::default().fg(MAGENTA).bold())
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BLUE)),
+            )
+            .highlight_style(Style::default().bg(MAGENTA).fg(BG).bold())
+            .highlight_symbol("▶ "),
+        area,
+        &mut app.theme_state,
+    );
 }
 
 fn render_font(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.font_options
+    let items: Vec<ListItem> = app
+        .font_options
         .iter()
         .map(|option| {
             let style = if option.starts_with("--") {
@@ -1400,11 +1936,13 @@ fn render_font(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     let list = List::new(items)
-        .block(Block::default()
-            .title(" FONT ")
-            .title_style(Style::default().fg(MAGENTA).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BLUE)))
+        .block(
+            Block::default()
+                .title(" FONT ")
+                .title_style(Style::default().fg(MAGENTA).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BLUE)),
+        )
         .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
         .highlight_symbol("> ");
 
@@ -1412,7 +1950,8 @@ fn render_font(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn render_cursor(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.cursor_options
+    let items: Vec<ListItem> = app
+        .cursor_options
         .iter()
         .map(|option| {
             let style = if option.starts_with("--") {
@@ -1427,11 +1966,13 @@ fn render_cursor(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     let list = List::new(items)
-        .block(Block::default()
-            .title(" CURSOR ")
-            .title_style(Style::default().fg(MAGENTA).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BLUE)))
+        .block(
+            Block::default()
+                .title(" CURSOR ")
+                .title_style(Style::default().fg(MAGENTA).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BLUE)),
+        )
         .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
         .highlight_symbol("> ");
 
@@ -1439,17 +1980,20 @@ fn render_cursor(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn render_cursor_shaders(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.cursor_shaders
+    let items: Vec<ListItem> = app
+        .cursor_shaders
         .iter()
         .map(|shader| ListItem::new(shader.as_str()))
         .collect();
 
     let list = List::new(items)
-        .block(Block::default()
-            .title(" ⚡ CURSOR EFFECTS ")
-            .title_style(Style::default().fg(MAGENTA).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BLUE)))
+        .block(
+            Block::default()
+                .title(" ⚡ CURSOR EFFECTS ")
+                .title_style(Style::default().fg(MAGENTA).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BLUE)),
+        )
         .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
         .highlight_symbol("▶ ");
 
@@ -1490,11 +2034,13 @@ fn render_screen_shaders(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     let list = List::new(items)
-        .block(Block::default()
-            .title(" 🌊 SCREEN EFFECTS ")
-            .title_style(Style::default().fg(MAGENTA).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BLUE)))
+        .block(
+            Block::default()
+                .title(" 🌊 SCREEN EFFECTS ")
+                .title_style(Style::default().fg(MAGENTA).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BLUE)),
+        )
         .highlight_style(Style::default().bg(MAGENTA).fg(BG).bold())
         .highlight_symbol("▶ ");
 
@@ -1502,17 +2048,68 @@ fn render_screen_shaders(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn render_window(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.window_options.iter().map(|o| ListItem::new(o.as_str()).style(if o.starts_with("--") { Style::default().fg(YELLOW).bold() } else if o.is_empty() { Style::default() } else { Style::default().fg(Color::White) })).collect();
-    f.render_stateful_widget(List::new(items).block(Block::default().title(" WINDOW ").title_style(Style::default().fg(MAGENTA).bold()).borders(Borders::ALL).border_style(Style::default().fg(BLUE))).highlight_style(Style::default().bg(BLUE).fg(BG).bold()).highlight_symbol("> "), area, &mut app.window_state);
+    let items: Vec<ListItem> = app
+        .window_options
+        .iter()
+        .map(|o| {
+            ListItem::new(o.as_str()).style(if o.starts_with("--") {
+                Style::default().fg(YELLOW).bold()
+            } else if o.is_empty() {
+                Style::default()
+            } else {
+                Style::default().fg(Color::White)
+            })
+        })
+        .collect();
+    f.render_stateful_widget(
+        List::new(items)
+            .block(
+                Block::default()
+                    .title(" WINDOW ")
+                    .title_style(Style::default().fg(MAGENTA).bold())
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BLUE)),
+            )
+            .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
+            .highlight_symbol("> "),
+        area,
+        &mut app.window_state,
+    );
 }
 
 fn render_shell(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.shell_options.iter().map(|o| ListItem::new(o.as_str()).style(if o.starts_with("--") { Style::default().fg(YELLOW).bold() } else if o.is_empty() { Style::default() } else { Style::default().fg(Color::White) })).collect();
-    f.render_stateful_widget(List::new(items).block(Block::default().title(" SHELL ").title_style(Style::default().fg(MAGENTA).bold()).borders(Borders::ALL).border_style(Style::default().fg(BLUE))).highlight_style(Style::default().bg(BLUE).fg(BG).bold()).highlight_symbol("> "), area, &mut app.shell_state);
+    let items: Vec<ListItem> = app
+        .shell_options
+        .iter()
+        .map(|o| {
+            ListItem::new(o.as_str()).style(if o.starts_with("--") {
+                Style::default().fg(YELLOW).bold()
+            } else if o.is_empty() {
+                Style::default()
+            } else {
+                Style::default().fg(Color::White)
+            })
+        })
+        .collect();
+    f.render_stateful_widget(
+        List::new(items)
+            .block(
+                Block::default()
+                    .title(" SHELL ")
+                    .title_style(Style::default().fg(MAGENTA).bold())
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BLUE)),
+            )
+            .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
+            .highlight_symbol("> "),
+        area,
+        &mut app.shell_state,
+    );
 }
 
 fn render_appearance(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.appearance_options
+    let items: Vec<ListItem> = app
+        .appearance_options
         .iter()
         .map(|option| {
             let style = if option.starts_with("──") {
@@ -1525,11 +2122,13 @@ fn render_appearance(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     let list = List::new(items)
-        .block(Block::default()
-            .title(" 🎨 APPEARANCE ")
-            .title_style(Style::default().fg(MAGENTA).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BLUE)))
+        .block(
+            Block::default()
+                .title(" 🎨 APPEARANCE ")
+                .title_style(Style::default().fg(MAGENTA).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BLUE)),
+        )
         .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
         .highlight_symbol("▶ ");
 
@@ -1537,7 +2136,8 @@ fn render_appearance(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn render_mouse(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.mouse_options
+    let items: Vec<ListItem> = app
+        .mouse_options
         .iter()
         .map(|option| {
             let style = if option.starts_with("--") {
@@ -1552,11 +2152,13 @@ fn render_mouse(f: &mut Frame, app: &mut App, area: Rect) {
         .collect();
 
     let list = List::new(items)
-        .block(Block::default()
-            .title(" MOUSE ")
-            .title_style(Style::default().fg(MAGENTA).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BLUE)))
+        .block(
+            Block::default()
+                .title(" MOUSE ")
+                .title_style(Style::default().fg(MAGENTA).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BLUE)),
+        )
         .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
         .highlight_symbol("> ");
 
@@ -1564,19 +2166,46 @@ fn render_mouse(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 fn render_clipboard(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = app.clipboard_options.iter().map(|o| ListItem::new(o.as_str()).style(if o.starts_with("--") { Style::default().fg(YELLOW).bold() } else if o.is_empty() { Style::default() } else { Style::default().fg(Color::White) })).collect();
-    f.render_stateful_widget(List::new(items).block(Block::default().title(" CLIPBOARD ").title_style(Style::default().fg(MAGENTA).bold()).borders(Borders::ALL).border_style(Style::default().fg(BLUE))).highlight_style(Style::default().bg(BLUE).fg(BG).bold()).highlight_symbol("> "), area, &mut app.clipboard_state);
+    let items: Vec<ListItem> = app
+        .clipboard_options
+        .iter()
+        .map(|o| {
+            ListItem::new(o.as_str()).style(if o.starts_with("--") {
+                Style::default().fg(YELLOW).bold()
+            } else if o.is_empty() {
+                Style::default()
+            } else {
+                Style::default().fg(Color::White)
+            })
+        })
+        .collect();
+    f.render_stateful_widget(
+        List::new(items)
+            .block(
+                Block::default()
+                    .title(" CLIPBOARD ")
+                    .title_style(Style::default().fg(MAGENTA).bold())
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(BLUE)),
+            )
+            .highlight_style(Style::default().bg(BLUE).fg(BG).bold())
+            .highlight_symbol("> "),
+        area,
+        &mut app.clipboard_state,
+    );
 }
 
 fn render_config(f: &mut Frame, app: &mut App, area: Rect) {
     let config_text = Text::from(app.current_config.as_str());
 
     let paragraph = Paragraph::new(config_text)
-        .block(Block::default()
-            .title(" ⚙️  CURRENT CONFIG ")
-            .title_style(Style::default().fg(MAGENTA).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BLUE)))
+        .block(
+            Block::default()
+                .title(" ⚙️  CURRENT CONFIG ")
+                .title_style(Style::default().fg(MAGENTA).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BLUE)),
+        )
         .wrap(Wrap { trim: false });
 
     f.render_widget(paragraph, area);
@@ -1595,7 +2224,8 @@ mod tests {
 
     #[test]
     fn config_path_is_platform_appropriate() {
-        let path = get_ghostty_config_path().expect("config path should resolve on supported platforms");
+        let path =
+            get_ghostty_config_path().expect("config path should resolve on supported platforms");
         let s = path.to_string_lossy();
         #[cfg(target_os = "macos")]
         assert!(s.contains("Library/Application Support/com.mitchellh.ghostty/config"));
@@ -1632,7 +2262,10 @@ mod tests {
         fs::write(dir.join("notes.txt"), "ignored").unwrap();
 
         let names = walk_shaders(&dir);
-        assert_eq!(names, vec!["alpha".to_string(), "beta".to_string(), "zeta".to_string()]);
+        assert_eq!(
+            names,
+            vec!["alpha".to_string(), "beta".to_string(), "zeta".to_string()]
+        );
         fs::remove_dir_all(&dir).ok();
     }
 
@@ -1659,7 +2292,10 @@ mod tests {
     fn strip_theme_tag_handles_known_shapes() {
         assert_eq!(strip_theme_tag("Dracula (resources)"), "Dracula");
         assert_eq!(strip_theme_tag("One Dark (user)"), "One Dark");
-        assert_eq!(strip_theme_tag("Catppuccin Mocha (resources)"), "Catppuccin Mocha");
+        assert_eq!(
+            strip_theme_tag("Catppuccin Mocha (resources)"),
+            "Catppuccin Mocha"
+        );
         // No tag — pass through.
         assert_eq!(strip_theme_tag("plain-name"), "plain-name");
         // Paren in name but no space-paren — pass through.
@@ -1702,7 +2338,10 @@ mod tests {
     #[test]
     fn cursor_style_parser_order_is_correct() {
         // Block Hollow must match before Block (it contains "Block" as substring).
-        assert_eq!(cursor_style_from_option("Style: Block Hollow"), "block_hollow");
+        assert_eq!(
+            cursor_style_from_option("Style: Block Hollow"),
+            "block_hollow"
+        );
         assert_eq!(cursor_style_from_option("Style: Block"), "block");
         assert_eq!(cursor_style_from_option("Style: Bar"), "bar");
         assert_eq!(cursor_style_from_option("Style: Underline"), "underline");
@@ -1743,9 +2382,17 @@ mod tests {
     #[test]
     fn next_theme_index_skips_separators_and_blanks() {
         let themes: Vec<String> = vec![
-            "-- POPULAR --", "Dracula", "TokyoNight",
-            "", "-- ALL THEMES --", "0x96f", "12-bit Rainbow",
-        ].into_iter().map(String::from).collect();
+            "-- POPULAR --",
+            "Dracula",
+            "TokyoNight",
+            "",
+            "-- ALL THEMES --",
+            "0x96f",
+            "12-bit Rainbow",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
 
         // From Dracula (idx 1) -> TokyoNight (idx 2)
         assert_eq!(next_theme_index(&themes, 1), 2);
@@ -1781,7 +2428,10 @@ mod tests {
         assert_eq!(parse_reload_keybind(cfg_with_comment), None);
 
         let cfg_complex = "font-size = 14\nkeybind = ctrl+shift+comma=reload_config\n";
-        assert_eq!(parse_reload_keybind(cfg_complex), Some("ctrl+shift+comma".to_string()));
+        assert_eq!(
+            parse_reload_keybind(cfg_complex),
+            Some("ctrl+shift+comma".to_string())
+        );
 
         let cfg_absent = "theme = Nord\nfont-size = 14\n";
         assert_eq!(parse_reload_keybind(cfg_absent), None);
