@@ -1,17 +1,25 @@
 [package]
 name = "ghostty-tui"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-authors = ["Daniel Gosek <daniel@ritual.net>"]
+rust-version = "1.75"
+authors = ["snakeg0d <danielgosek@gmail.com>"]
 description = "Beautiful terminal UI for managing Ghostty terminal configuration"
 license = "MIT"
-repository = "https://github.com/dan-ritual/ghostty-tui"
+repository = "https://github.com/snakeg0d/ghostty-tui"
+homepage = "https://github.com/snakeg0d/ghostty-tui"
 readme = "README.md"
-keywords = ["ghostty", "terminal", "tui", "config", "configuration"]
-categories = ["command-line-utilities", "config"]
+keywords = ["ghostty", "terminal", "tui", "ratatui", "config"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 ratatui = "0.29"
 crossterm = "0.28"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+shell-words = "1.1"
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 1
