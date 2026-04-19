@@ -1581,3 +1581,209 @@ fn render_config(f: &mut Frame, app: &mut App, area: Rect) {
 
     f.render_widget(paragraph, area);
 }
+
+// ============================================================================
+// Unit tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    // ---- Path detection ---------------------------------------------------
+
+    #[test]
+    fn config_path_is_platform_appropriate() {
+        let path = get_ghostty_config_path().expect("config path should resolve on supported platforms");
+        let s = path.to_string_lossy();
+        #[cfg(target_os = "macos")]
+        assert!(s.contains("Library/Application Support/com.mitchellh.ghostty/config"));
+        #[cfg(target_os = "linux")]
+        assert!(s.contains("ghostty/config"));
+        #[cfg(target_os = "windows")]
+        assert!(s.contains("ghostty") && s.ends_with("config"));
+    }
+
+    #[test]
+    fn manager_script_env_override_wins() {
+        let tmp = std::env::temp_dir().join("ghostty-tui-test-manager.sh");
+        fs::write(&tmp, "#!/bin/sh\necho ok\n").unwrap();
+        // SAFETY: test-only; single-threaded mutation of env.
+        // Serial tests with env are flaky, but this one key is unique per test.
+        std::env::set_var("GHOSTTY_MANAGER_PATH", &tmp);
+        let resolved = get_manager_script_path().unwrap();
+        assert_eq!(resolved, tmp);
+        std::env::remove_var("GHOSTTY_MANAGER_PATH");
+        fs::remove_file(&tmp).ok();
+    }
+
+    // ---- Shader discovery -------------------------------------------------
+
+    #[test]
+    fn walk_shaders_ignores_non_glsl_and_sorts() {
+        let dir = std::env::temp_dir().join("ghostty-tui-test-shaders");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("zeta.glsl"), "").unwrap();
+        fs::write(dir.join("alpha.glsl"), "").unwrap();
+        fs::write(dir.join("beta.glsl"), "").unwrap();
+        fs::write(dir.join("README.md"), "ignored").unwrap();
+        fs::write(dir.join("notes.txt"), "ignored").unwrap();
+
+        let names = walk_shaders(&dir);
+        assert_eq!(names, vec!["alpha".to_string(), "beta".to_string(), "zeta".to_string()]);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn walk_shaders_missing_dir_returns_empty() {
+        let missing = std::env::temp_dir().join("definitely-not-a-dir-xyz-12345");
+        assert!(walk_shaders(&missing).is_empty());
+    }
+
+    // ---- Theme discovery parser -------------------------------------------
+    //
+    // We can't easily unit-test discover_themes() itself without mocking
+    // Command. But the core parsing concern — stripping the trailing
+    // " (<source>)" tag — is worth asserting via a tiny local helper.
+
+    fn strip_theme_tag(line: &str) -> String {
+        match line.rfind(" (") {
+            Some(idx) if line.trim_end().ends_with(')') => line[..idx].to_string(),
+            _ => line.to_string(),
+        }
+    }
+
+    #[test]
+    fn strip_theme_tag_handles_known_shapes() {
+        assert_eq!(strip_theme_tag("Dracula (resources)"), "Dracula");
+        assert_eq!(strip_theme_tag("One Dark (user)"), "One Dark");
+        assert_eq!(strip_theme_tag("Catppuccin Mocha (resources)"), "Catppuccin Mocha");
+        // No tag — pass through.
+        assert_eq!(strip_theme_tag("plain-name"), "plain-name");
+        // Paren in name but no space-paren — pass through.
+        assert_eq!(strip_theme_tag("weird(name)"), "weird(name)");
+    }
+
+    // ---- Version parser ---------------------------------------------------
+
+    fn parse_version_line(line: &str) -> Option<(u32, u32)> {
+        let ver = line.split_whitespace().nth(1)?;
+        let mut parts = ver.split('.');
+        let major: u32 = parts.next()?.parse().ok()?;
+        let minor: u32 = parts.next()?.parse().ok()?;
+        Some((major, minor))
+    }
+
+    #[test]
+    fn parse_version_line_handles_common_shapes() {
+        assert_eq!(parse_version_line("Ghostty 1.3.1"), Some((1, 3)));
+        assert_eq!(parse_version_line("Ghostty 1.2.0"), Some((1, 2)));
+        assert_eq!(parse_version_line("Ghostty 0.99.0"), Some((0, 99)));
+        assert_eq!(parse_version_line("Ghostty not-a-version"), None);
+        assert_eq!(parse_version_line(""), None);
+    }
+
+    // ---- Option parser (fragile `contains()` chains in select_item) -------
+
+    fn cursor_style_from_option(option: &str) -> &'static str {
+        if option.contains("Block Hollow") {
+            "block_hollow"
+        } else if option.contains("Block") {
+            "block"
+        } else if option.contains("Bar") {
+            "bar"
+        } else {
+            "underline"
+        }
+    }
+
+    #[test]
+    fn cursor_style_parser_order_is_correct() {
+        // Block Hollow must match before Block (it contains "Block" as substring).
+        assert_eq!(cursor_style_from_option("Style: Block Hollow"), "block_hollow");
+        assert_eq!(cursor_style_from_option("Style: Block"), "block");
+        assert_eq!(cursor_style_from_option("Style: Bar"), "bar");
+        assert_eq!(cursor_style_from_option("Style: Underline"), "underline");
+    }
+
+    fn font_style_from_option(option: &str) -> &'static str {
+        if option.contains("Bold Italic") {
+            "Bold Italic"
+        } else if option.contains("Italic") {
+            "Italic"
+        } else if option.contains("Bold") {
+            "Bold"
+        } else {
+            "Regular"
+        }
+    }
+
+    #[test]
+    fn font_style_parser_respects_precedence() {
+        // Bold Italic must match before Bold or Italic.
+        assert_eq!(font_style_from_option("Style: Bold Italic"), "Bold Italic");
+        assert_eq!(font_style_from_option("Style: Italic"), "Italic");
+        assert_eq!(font_style_from_option("Style: Bold"), "Bold");
+        assert_eq!(font_style_from_option("Style: Regular"), "Regular");
+    }
+
+    // ---- Separator skip logic (themes tab) --------------------------------
+
+    fn next_theme_index(themes: &[String], from: usize) -> usize {
+        let len = themes.len();
+        let mut next = if from >= len - 1 { 0 } else { from + 1 };
+        while themes[next].starts_with("--") || themes[next].is_empty() {
+            next = if next >= len - 1 { 0 } else { next + 1 };
+        }
+        next
+    }
+
+    #[test]
+    fn next_theme_index_skips_separators_and_blanks() {
+        let themes: Vec<String> = vec![
+            "-- POPULAR --", "Dracula", "TokyoNight",
+            "", "-- ALL THEMES --", "0x96f", "12-bit Rainbow",
+        ].into_iter().map(String::from).collect();
+
+        // From Dracula (idx 1) -> TokyoNight (idx 2)
+        assert_eq!(next_theme_index(&themes, 1), 2);
+        // From TokyoNight (idx 2) -> should skip "" + "-- ALL THEMES --" and land on 0x96f (idx 5)
+        assert_eq!(next_theme_index(&themes, 2), 5);
+        // From last ("12-bit Rainbow", idx 6) -> wrap, skip POPULAR header, land on Dracula (idx 1)
+        assert_eq!(next_theme_index(&themes, 6), 1);
+    }
+
+    // ---- Reload-keybind parser --------------------------------------------
+
+    fn parse_reload_keybind(content: &str) -> Option<String> {
+        for raw in content.lines() {
+            let line = raw.trim();
+            if line.starts_with('#') || !line.contains("reload_config") {
+                continue;
+            }
+            let after_eq = line.split_once('=')?.1.trim();
+            let combo = after_eq.split_once('=')?.0.trim();
+            if !combo.is_empty() {
+                return Some(combo.to_string());
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn parse_reload_keybind_finds_user_combo() {
+        let cfg = "theme = Dracula\nkeybind = super+r=reload_config\n";
+        assert_eq!(parse_reload_keybind(cfg), Some("super+r".to_string()));
+
+        let cfg_with_comment = "# keybind = super+r=reload_config\ntheme = Nord\n";
+        assert_eq!(parse_reload_keybind(cfg_with_comment), None);
+
+        let cfg_complex = "font-size = 14\nkeybind = ctrl+shift+comma=reload_config\n";
+        assert_eq!(parse_reload_keybind(cfg_complex), Some("ctrl+shift+comma".to_string()));
+
+        let cfg_absent = "theme = Nord\nfont-size = 14\n";
+        assert_eq!(parse_reload_keybind(cfg_absent), None);
+    }
+}
