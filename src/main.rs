@@ -121,6 +121,166 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
 }
 
 // ============================================================================
+// Asset discovery
+// ============================================================================
+
+/// Built-in cursor shader names, used when no on-disk asset dir is found.
+const FALLBACK_CURSOR_SHADERS: &[&str] = &[
+    "ripple_cursor", "sonic_boom_cursor", "cursor_tail", "cursor_sweep",
+    "glow", "tesla_coil", "cursor_warp", "rectangle_boom_cursor",
+    "ripple_rectangle_cursor",
+];
+
+/// Built-in screen shader names, used when no on-disk asset dir is found.
+const FALLBACK_SCREEN_SHADERS: &[&str] = &[
+    "amber-glow", "bettercrt", "bloom", "drunkard", "fireworks", "glitchy",
+    "inside-the-matrix", "matrix-hallway", "retro-terminal", "starfield",
+    "tft", "water",
+];
+
+/// Resolve the asset root directory.
+///
+/// Priority:
+///   1. `$GHOSTTY_TUI_ASSETS`                           (explicit override)
+///   2. `<binary-dir>/../assets/`                       (in-repo layout)
+///   3. `<binary-dir>/../share/ghostty-tui/assets/`     (installed layout)
+///   4. `$XDG_DATA_HOME/ghostty-tui/assets/`            (user-local fallback)
+fn resolve_assets_dir() -> Option<PathBuf> {
+    if let Ok(p) = env::var("GHOSTTY_TUI_ASSETS") {
+        let path = PathBuf::from(p);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+    if let Ok(exe) = env::current_exe() {
+        if let Some(bin_dir) = exe.parent() {
+            for candidate in [
+                bin_dir.join("../assets"),
+                bin_dir.join("../share/ghostty-tui/assets"),
+            ] {
+                if candidate.is_dir() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+    let xdg = env::var("XDG_DATA_HOME")
+        .unwrap_or_else(|_| format!("{}/.local/share", env::var("HOME").unwrap_or_default()));
+    let path = PathBuf::from(xdg).join("ghostty-tui/assets");
+    if path.is_dir() {
+        Some(path)
+    } else {
+        None
+    }
+}
+
+/// Walk a directory for `*.glsl` files, return names (without extension), sorted.
+fn walk_shaders(dir: &std::path::Path) -> Vec<String> {
+    match std::fs::read_dir(dir) {
+        Ok(entries) => {
+            let mut names: Vec<String> = entries
+                .filter_map(|e| e.ok())
+                .filter_map(|e| {
+                    let path = e.path();
+                    if path.extension().and_then(|s| s.to_str()) == Some("glsl") {
+                        path.file_stem().and_then(|s| s.to_str()).map(str::to_string)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            names.sort();
+            names
+        }
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Discover cursor shaders. Falls back to the built-in list if no asset dir is found.
+fn discover_cursor_shaders() -> Vec<String> {
+    let mut shaders = vec!["None".to_string()];
+    if let Some(assets) = resolve_assets_dir() {
+        let found = walk_shaders(&assets.join("shaders").join("cursors"));
+        if !found.is_empty() {
+            shaders.extend(found);
+            return shaders;
+        }
+    }
+    // Fallback to hardcoded list (keeps the UI functional without on-disk assets)
+    for s in FALLBACK_CURSOR_SHADERS {
+        shaders.push((*s).to_string());
+    }
+    shaders
+}
+
+/// Discover screen shaders. Falls back to the built-in list if no asset dir is found.
+fn discover_screen_shaders() -> Vec<String> {
+    if let Some(assets) = resolve_assets_dir() {
+        let found = walk_shaders(&assets.join("shaders").join("screen"));
+        if !found.is_empty() {
+            return found;
+        }
+    }
+    FALLBACK_SCREEN_SHADERS.iter().map(|s| s.to_string()).collect()
+}
+
+/// Install bundled assets to the user's ghostty config dir.
+///
+/// Copies `<assets>/themes/*` -> `~/.config/ghostty/themes/`
+///        `<assets>/shaders/cursors/*.glsl` -> `~/.config/ghostty/shaders/cursors/`
+///        `<assets>/shaders/screen/*.glsl` -> `~/.config/ghostty/shaders/screen/`
+///
+/// Does NOT overwrite existing files. Does NOT install config presets (those are
+/// always opt-in per-file, since a config preset replaces the whole config).
+fn install_assets() -> Result<(usize, usize), String> {
+    let assets = resolve_assets_dir()
+        .ok_or_else(|| "Could not locate bundled assets — set GHOSTTY_TUI_ASSETS or run from a checkout.".to_string())?;
+
+    let home = env::var("HOME").map_err(|_| "HOME not set".to_string())?;
+    let user_base = PathBuf::from(home).join(".config").join("ghostty");
+
+    let mappings = [
+        (assets.join("themes"), user_base.join("themes"), None),
+        (assets.join("shaders").join("cursors"), user_base.join("shaders").join("cursors"), Some("glsl")),
+        (assets.join("shaders").join("screen"),  user_base.join("shaders").join("screen"),  Some("glsl")),
+    ];
+
+    let mut copied = 0usize;
+    let mut skipped = 0usize;
+
+    for (src, dst, ext_filter) in &mappings {
+        if !src.is_dir() {
+            continue;
+        }
+        std::fs::create_dir_all(dst).map_err(|e| format!("mkdir {:?}: {}", dst, e))?;
+        for entry in std::fs::read_dir(src).map_err(|e| format!("read {:?}: {}", src, e))? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            if let Some(ext) = ext_filter {
+                if path.extension().and_then(|s| s.to_str()) != Some(ext) {
+                    continue;
+                }
+            }
+            // Skip README.md in theme dir
+            if path.file_name().and_then(|s| s.to_str()) == Some("README.md") {
+                continue;
+            }
+            let target = dst.join(path.file_name().unwrap());
+            if target.exists() {
+                skipped += 1;
+                continue;
+            }
+            std::fs::copy(&path, &target).map_err(|e| format!("copy {:?} -> {:?}: {}", path, target, e))?;
+            copied += 1;
+        }
+    }
+    Ok((copied, skipped))
+}
+
+// ============================================================================
 // Theme discovery
 // ============================================================================
 
@@ -346,33 +506,9 @@ impl App {
                 "Opacity: 0.5 (Faded)".to_string(),
             ],
 
-            cursor_shaders: vec![
-                "None".to_string(),
-                "ripple_cursor".to_string(),
-                "sonic_boom_cursor".to_string(),
-                "cursor_tail".to_string(),
-                "cursor_sweep".to_string(),
-                "glow".to_string(),
-                "tesla_coil".to_string(),
-                "cursor_warp".to_string(),
-                "rectangle_boom_cursor".to_string(),
-                "ripple_rectangle_cursor".to_string(),
-            ],
+            cursor_shaders: discover_cursor_shaders(),
 
-            screen_shaders: vec![
-                "amber-glow".to_string(),
-                "bettercrt".to_string(),
-                "bloom".to_string(),
-                "drunkard".to_string(),
-                "fireworks".to_string(),
-                "glitchy".to_string(),
-                "inside-the-matrix".to_string(),
-                "matrix-hallway".to_string(),
-                "retro-terminal".to_string(),
-                "starfield".to_string(),
-                "tft".to_string(),
-                "water".to_string(),
-            ],
+            screen_shaders: discover_screen_shaders(),
 
             screen_shader_combos: vec![
                 ("None".to_string(), "Disable all screen shaders".to_string()),
@@ -954,6 +1090,31 @@ fn main() -> Result<(), io::Error> {
                     }
                 }
             }
+            "--install-assets" => {
+                match install_assets() {
+                    Ok((copied, skipped)) => {
+                        println!("Installed {} files. Skipped {} that already existed.", copied, skipped);
+                        println!("Install dir: ~/.config/ghostty/{{themes,shaders/{{cursors,screen}}}}");
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        eprintln!("install-assets failed: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+            "--assets-path" => {
+                match resolve_assets_dir() {
+                    Some(p) => {
+                        println!("{}", p.display());
+                        return Ok(());
+                    }
+                    None => {
+                        eprintln!("No assets directory resolved. Set GHOSTTY_TUI_ASSETS.");
+                        std::process::exit(1);
+                    }
+                }
+            }
             _ => {
                 eprintln!("Unknown argument: {}", args[1]);
                 eprintln!("Use --help for usage information");
@@ -1007,9 +1168,14 @@ fn print_help() {
     println!("    -h, --help           Print this help message");
     println!("    -v, --version        Print version information");
     println!("    --config-path        Print the Ghostty config file path for this platform");
+    println!("    --assets-path        Print the resolved ghostty-tui assets directory");
+    println!("    --install-assets     Copy bundled themes + shaders into ~/.config/ghostty/");
     println!();
     println!("ENVIRONMENT VARIABLES:");
     println!("    GHOSTTY_MANAGER_PATH    Path to ghostty-manager.sh script");
+    println!("    GHOSTTY_TUI_ASSETS      Path to the ghostty-tui assets dir (themes/shaders/configs)");
+    println!("    GHOSTTY_THEMES_DIR      Override user themes directory (default ~/.config/ghostty/themes)");
+    println!("    GHOSTTY_CONFIG_PATH     Override active Ghostty config path");
     println!();
     println!("NAVIGATION:");
     println!("    Tab/Shift+Tab        Switch between tabs");
@@ -1018,7 +1184,7 @@ fn print_help() {
     println!("    r                    Reload current config");
     println!("    q or Esc             Quit");
     println!();
-    println!("For more information, visit: https://github.com/yourusername/ghostty-tui");
+    println!("For more information, visit: https://github.com/snakeg0d/ghostty-tui");
 }
 
 // ============================================================================
