@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo build --release
+        run: cargo build --release
+
+      - name: cargo test
+        run: cargo test --release
+
+      - name: Smoke — binary launches
+        run: |
+          ./target/release/ghostty-tui --version
+          ./target/release/ghostty-tui --help > /dev/null
+
+      - name: Smoke — asset install loop (isolated HOME)
+        run: |
+          TMPHOME=$(mktemp -d)
+          HOME="$TMPHOME" GHOSTTY_TUI_ASSETS="$PWD/assets" \
+            ./target/release/ghostty-tui --install-assets
+          test "$(ls "$TMPHOME/.config/ghostty/themes" | wc -l | tr -d ' ')" = "5"
+          test "$(ls "$TMPHOME/.config/ghostty/shaders/cursors" | wc -l | tr -d ' ')" = "9"
+          test "$(ls "$TMPHOME/.config/ghostty/shaders/screen" | wc -l | tr -d ' ')" = "12"
+          rm -rf "$TMPHOME"
+
+      - name: Scrub check (no personal paths leaked into the repo)
+        run: |
+          ! grep -rn "/Users/[a-z]" \
+            --exclude-dir=.git --exclude-dir=target \
+            . || (echo "personal user path leaked into repo" && exit 1)
+
+  manager-script-syntax:
+    name: bash syntax (ghostty-manager.sh)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n
+        run: bash -n scripts/ghostty-manager.sh
+      - name: shellcheck (advisory)
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          shellcheck --severity=error scripts/ghostty-manager.sh || true
