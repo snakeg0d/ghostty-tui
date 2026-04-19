@@ -121,6 +121,89 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
 }
 
 // ============================================================================
+// Theme discovery
+// ============================================================================
+
+/// Curated "Popular" list shown at the top of the themes tab.
+const POPULAR_THEMES: &[&str] = &[
+    "Dracula",
+    "TokyoNight",
+    "Gruvbox Dark",
+    "Catppuccin Mocha",
+    "Nord",
+    "Solarized Dark",
+    "One Dark",
+    "Monokai",
+];
+
+/// Fallback list shown only when `ghostty +list-themes` is unavailable.
+const FALLBACK_THEMES: &[&str] = &[
+    "Dracula",
+    "TokyoNight",
+    "Gruvbox Dark",
+    "Catppuccin Mocha",
+    "Nord",
+    "Solarized Dark",
+    "One Dark",
+    "Monokai",
+    "tokyonight-night",
+    "tokyonight-storm",
+    "tokyonight-day",
+    "onenord",
+    "onenord-light",
+    "Tango",
+    "Xterm",
+    "Linux",
+];
+
+/// Discover themes at runtime.
+///
+/// Runs `ghostty +list-themes` and parses its output. Each line is of the
+/// form `<name> (<source>)` — we strip the trailing parenthesised source tag.
+///
+/// Returns the assembled theme list (with the curated POPULAR header prepended)
+/// and a boolean indicating whether discovery succeeded. If ghostty isn't in
+/// `$PATH` or the command fails, returns the FALLBACK_THEMES wrapped in the
+/// same header scheme so the UI still renders.
+fn discover_themes() -> (Vec<String>, bool) {
+    let mut out: Vec<String> = Vec::new();
+    out.push("-- POPULAR --".to_string());
+    for p in POPULAR_THEMES {
+        out.push((*p).to_string());
+    }
+    out.push(String::new());
+
+    match Command::new("ghostty").arg("+list-themes").output() {
+        Ok(output) if output.status.success() => {
+            out.push("-- ALL THEMES --".to_string());
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut names: Vec<String> = stdout
+                .lines()
+                .map(|line| {
+                    // Strip trailing " (source)" tag if present.
+                    match line.rfind(" (") {
+                        Some(idx) if line.trim_end().ends_with(')') => line[..idx].to_string(),
+                        _ => line.to_string(),
+                    }
+                })
+                .filter(|s| !s.is_empty())
+                .collect();
+            names.sort();
+            names.dedup();
+            out.extend(names);
+            (out, true)
+        }
+        _ => {
+            out.push("-- FALLBACK (ghostty not in PATH) --".to_string());
+            for t in FALLBACK_THEMES {
+                out.push((*t).to_string());
+            }
+            (out, false)
+        }
+    }
+}
+
+// ============================================================================
 // Application Data Structures
 // ============================================================================
 
@@ -182,6 +265,13 @@ impl App {
         // Get manager script path early to fail fast if not found
         let manager_script_path = get_manager_script_path()?;
 
+        let (themes, themes_discovered) = discover_themes();
+        let theme_status = if themes_discovered {
+            format!("Discovered {} themes via `ghostty +list-themes`.", themes.len().saturating_sub(11))
+        } else {
+            "⚠ ghostty not in PATH — using fallback theme list.".to_string()
+        };
+
         let mut app = Self {
             tab: Tab::Themes,
             theme_state: ListState::default(),
@@ -195,7 +285,7 @@ impl App {
             window_state: ListState::default(),
             shell_state: ListState::default(),
 
-            themes: vec!["-- POPULAR --","Dracula","TokyoNight","Gruvbox Dark","Catppuccin Mocha","Nord","Solarized Dark","One Dark","Monokai","","-- CUSTOM --","tokyonight-night","tokyonight-storm","tokyonight-day","onenord","onenord-light","","-- CLASSICS --","Tango","Xterm","Linux"].iter().map(|s| s.to_string()).collect(),
+            themes,
 
             font_options: vec![
                 "-- FONT FAMILY --".to_string(),
@@ -321,7 +411,7 @@ impl App {
             shell_options: vec!["-- SHELL INTEGRATION --","Integration: Detect (Auto)","Integration: Bash","Integration: Fish","Integration: Zsh","Integration: Elvish","Integration: None","","-- WORKING DIRECTORY --","Start In: Home","Start In: Inherit","","-- CLOSE BEHAVIOR --","Confirm Close: On","Confirm Close: Off","Confirm Close: Always","","-- SCROLLBACK --","Scrollback: 1,000 lines","Scrollback: 5,000 lines","Scrollback: 10,000 lines","Scrollback: 50,000 lines","Scrollback: 100,000 lines"].iter().map(|s| s.to_string()).collect(),
 
             current_config: String::new(),
-            status_message: "Press TAB to switch tabs, ↑↓ to navigate, ENTER to select, Q to quit".to_string(),
+            status_message: theme_status,
             manager_script_path,
         };
 
