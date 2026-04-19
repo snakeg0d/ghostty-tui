@@ -123,6 +123,39 @@ fn get_manager_script_path() -> Result<PathBuf, String> {
 }
 
 // ============================================================================
+// Reload keybind detection
+// ============================================================================
+
+/// Scan the active Ghostty config for a `keybind = <combo>=reload_config` line.
+/// Returns the combo (e.g. "super+r") if found, None otherwise.
+fn detect_reload_keybind() -> Option<String> {
+    let cfg = get_ghostty_config_path().ok()?;
+    let content = std::fs::read_to_string(&cfg).ok()?;
+    for raw in content.lines() {
+        let line = raw.trim();
+        if line.starts_with('#') || !line.contains("reload_config") {
+            continue;
+        }
+        // Expected form: `keybind = <combo>=reload_config`
+        let after_eq = line.split_once('=')?.1.trim(); // "<combo>=reload_config"
+        let combo = after_eq.split_once('=')?.0.trim(); // "<combo>"
+        if !combo.is_empty() {
+            return Some(combo.to_string());
+        }
+    }
+    None
+}
+
+/// Human-readable hint for how to reload Ghostty after writing config changes.
+/// Prefers the user's actual `reload_config` binding; falls back to generic guidance.
+fn reload_hint() -> String {
+    match detect_reload_keybind() {
+        Some(combo) => format!("Reload Ghostty: {} (or open a new window)", combo),
+        None => "Reload: bind `keybind = super+r=reload_config` in your config, or open a new window".to_string(),
+    }
+}
+
+// ============================================================================
 // Ghostty version check
 // ============================================================================
 
@@ -459,12 +492,17 @@ impl App {
             _ => None,
         };
 
+        let hint = reload_hint();
         let theme_status = if let Some(warn) = version_warn {
-            warn
+            format!("{}  •  {}", warn, hint)
         } else if themes_discovered {
-            format!("Discovered {} themes via `ghostty +list-themes`.", themes.len().saturating_sub(11))
+            format!(
+                "Discovered {} themes  •  {}",
+                themes.len().saturating_sub(11),
+                hint
+            )
         } else {
-            "⚠ ghostty not in PATH — using fallback theme list.".to_string()
+            format!("⚠ ghostty not in PATH — fallback themes  •  {}", hint)
         };
 
         let mut app = Self {
@@ -1227,9 +1265,14 @@ fn print_help() {
     println!("NAVIGATION:");
     println!("    Tab/Shift+Tab        Switch between tabs");
     println!("    ↑/↓ or j/k           Navigate options");
-    println!("    Enter                Select option");
-    println!("    r                    Reload current config");
+    println!("    Enter                Select option (writes to Ghostty config)");
+    println!("    r                    Re-read the config file into the Cfg tab");
     println!("    q or Esc             Quit");
+    println!();
+    println!("RELOAD GHOSTTY (picks up the changes you just wrote):");
+    println!("    <your reload_config keybind>   e.g. super+r on macOS if bound");
+    println!("    …or just open a new window/tab — it re-reads on launch.");
+    println!("    Bind it with: keybind = super+r=reload_config");
     println!();
     println!("For more information, visit: https://github.com/snakeg0d/ghostty-tui");
 }
