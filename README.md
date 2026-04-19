@@ -18,7 +18,7 @@ A beautiful, keyboard-driven terminal interface for managing [Ghostty](https://g
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/ghostty-tui
+git clone https://github.com/snakeg0d/ghostty-tui
 cd ghostty-tui
 cargo build --release
 ./target/release/ghostty-tui
@@ -34,7 +34,7 @@ ghostty-tui
 ## Requirements
 
 - [Ghostty](https://ghostty.org) terminal emulator installed
-- Rust 1.70+ (for building from source)
+- Rust 1.75+ (for building from source)
 - `ghostty-manager.sh` script (bundled with the project)
 
 ## Quick Start
@@ -70,12 +70,6 @@ ghostty-tui
 ## Screenshots
 
 *Coming soon - screenshots and demo GIFs will be added*
-
-## Detailed Usage
-
-For comprehensive documentation on all features and options, see [QUICKSTART.md](QUICKSTART.md).
-
-For information on planned features and improvements, see [IMPROVEMENTS.md](IMPROVEMENTS.md).
 
 ## Environment Variables
 

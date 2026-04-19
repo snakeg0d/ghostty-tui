@@ -1,20 +1,18 @@
 # Rust build artifacts
 /target/
-Cargo.lock
+/dist/
 **/*.rs.bk
 *.pdb
+
+# Release archives
+*.zip
+*.tar.gz
 
 # IDE files
 .idea/
 .vscode/
 *.swp
 *.swo
-*~
-.DS_Store
-
-# Backup files
-*.bak
-*.backup
 *~
 
 # OS files
@@ -24,6 +22,12 @@ Cargo.lock
 Thumbs.db
 Desktop.ini
 
-# Test artifacts
+# Backup + temp
+*.bak
+*.backup
 *.log
 *.tmp
+
+# Personal / dotfiles-local only
+thoughts/
+.claude/
