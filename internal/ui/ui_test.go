@@ -905,3 +905,299 @@ func TestRepeatedFontFallbackRoundTrip(t *testing.T) {
 		t.Fatalf("reset should stage an empty value list, got %#v (present=%v)", got, present)
 	}
 }
+
+// specimenText renders a specimen and strips styling so the sample's content
+// can be asserted.
+func specimenText(p core.Palette, title string, w, h int) string {
+	return stripANSI(renderSpecimen(specimenData{Title: title, Pal: p}, w, h, newStyles()))
+}
+
+// TestSpecimenAdaptiveComposition proves the sample drops whole blocks instead
+// of clipping them, keeps the palette ribbon, and always travels with the
+// SAMPLE tag.
+func TestSpecimenAdaptiveComposition(t *testing.T) {
+	pal := sampleTheme("nord", "Nord", false).Palette
+	for _, h := range []int{6, 8, 10, 14, 18, 24, 30} {
+		got := specimenText(pal, "Nord", 78, h)
+		assertGeometry(t, "specimen", got, 78, h)
+		if !strings.Contains(got, "SAMPLE") {
+			t.Errorf("h=%d: the SAMPLE tag must always be present", h)
+		}
+		if !strings.Contains(got, "bg #1e1e2e") {
+			t.Errorf("h=%d: the palette ribbon metadata must survive every height", h)
+		}
+		// The git diff is one block: both rows or neither.
+		hasMinus := strings.Contains(got, "- background = #101518")
+		hasPlus := strings.Contains(got, "+ background = #1e1e2e")
+		if hasMinus != hasPlus {
+			t.Errorf("h=%d: a half-drawn diff block leaked through:\n%s", h, got)
+		}
+		// No invented work is ever reported.
+		for _, banned := range []string{"compiled", "packages in", "files changed", "reviewed"} {
+			if strings.Contains(strings.ToLower(got), banned) {
+				t.Errorf("h=%d: specimen reports invented work: %q", h, banned)
+			}
+		}
+	}
+	// A tall specimen shows more blocks than a short one, never fewer.
+	short := specimenText(pal, "Nord", 78, 10)
+	tall := specimenText(pal, "Nord", 78, 30)
+	if strings.Count(tall, "\n") <= strings.Count(short, "\n") {
+		t.Fatal("adaptive composition should reveal more at greater height")
+	}
+	if !strings.Contains(tall, "func Look(n int) []string {") {
+		t.Error("a roomy specimen should show the code sample")
+	}
+}
+
+// TestSpecimenRibbonRhythm rejects the old continuous barcode: the ribbon is a
+// known number of separated cells.
+func TestSpecimenRibbonRhythm(t *testing.T) {
+	for _, tc := range []struct{ listW, count, cell, sep int }{
+		{34, 6, 1, 1},
+		{32, 5, 1, 1},
+		{29, 4, 1, 1},
+		{24, 3, 1, 1},
+	} {
+		count, cell, sep := swatchPlan(tc.listW)
+		if count != tc.count || cell != tc.cell || sep != tc.sep {
+			t.Errorf("swatchPlan(%d) = (%d,%d,%d), want (%d,%d,%d)",
+				tc.listW, count, cell, sep, tc.count, tc.cell, tc.sep)
+		}
+		if sep < 1 {
+			t.Errorf("swatchPlan(%d): swatches must be separated", tc.listW)
+		}
+	}
+}
+
+// TestTwoLineRowsKeepWholeNames proves two-line entries give the name the whole
+// first line, and that compact terminals fall back to one line per entry.
+func TestTwoLineRowsKeepWholeNames(t *testing.T) {
+	m := loadedModel()
+	long := "Catppuccin Mocha Frappé Extra Long Name"
+	m.themes.SetItems([]core.Choice{sampleTheme("catppuccin-mocha", long, false)})
+
+	m.SetSize(120, 36)
+	if m.rowLines() != 2 {
+		t.Fatal("a roomy terminal should use two-line entries")
+	}
+	m.layout()
+	body := m.themes.View(m.styles, m.rowOpts())
+	if len(body) != m.themes.height {
+		t.Fatalf("two-line list should fill its extent, got %d of %d", len(body), m.themes.height)
+	}
+	first := stripANSI(body[0])
+	if !strings.Contains(first, "Catppuccin Mocha Frappé") {
+		t.Fatalf("the first line should carry the name, got %q", first)
+	}
+	second := stripANSI(body[1])
+	if !strings.Contains(second, "dark") {
+		t.Fatalf("the second line should carry the appearance class, got %q", second)
+	}
+	if strings.Contains(second, "fixture themes") {
+		t.Fatalf("the second line must not repeat the source, got %q", second)
+	}
+	if strings.Contains(first, "▪") {
+		t.Fatalf("the first line must stay purely typographic, got %q", first)
+	}
+	if !strings.Contains(second, "▪") {
+		t.Fatalf("the second line should carry the swatches, got %q", second)
+	}
+	// The list honours the two-line grid, so the second entry starts at row 2.
+	if m.themes.cap() != m.themes.height/2 {
+		t.Fatalf("two-line capacity should halve: cap=%d height=%d", m.themes.cap(), m.themes.height)
+	}
+	assertGeometry(t, "two-line", m.render(), 120, 36)
+	m.themes.SetFavorites(map[string]bool{"theme:catppuccin-mocha": true})
+	if got := strings.Count(strings.Join(m.themes.View(m.styles, m.rowOpts()), "\n"), "★"); got != 1 {
+		t.Fatalf("a roomy favorite should have one marker, got %d", got)
+	}
+
+	// Compact terminals use one line per entry and still show a useful name.
+	m.SetSize(80, 24)
+	if m.rowLines() != 1 {
+		t.Fatal("a compact terminal should use single-line entries")
+	}
+	m.layout()
+	view := stripANSI(m.render())
+	if !strings.Contains(view, "Catppuccin Mocha") {
+		t.Errorf("a compact list should still show a useful name:\n%s", view)
+	}
+	assertGeometry(t, "one-line", m.render(), 80, 24)
+}
+
+// TestTypographySpecimenIsTruthful pins the font sample: real letterforms, the
+// ambiguity pairs, three weights, and an explicit statement that the inline
+// sample is not the selected family.
+func TestTypographySpecimenIsTruthful(t *testing.T) {
+	m := loadedModel()
+	m.SetSectionByName("fonts")
+	m.SetSize(120, 36)
+	view := stripANSI(m.render())
+	for _, want := range []string{
+		"Inline uses your terminal font",
+		"Preview selected font in Ghostty",
+		"0 O o",
+		"1 l I |",
+		"0123456789",
+		"regular   The quick brown fox",
+		"bold      Sphinx of black quartz",
+		"italic    Pack my box with five dozen",
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+		"abcdefghijklmnopqrstuvwxyz",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("typography specimen should contain %q:\n%s", want, view)
+		}
+	}
+	for _, banned := range []string{"rendered in Menlo", "your font is", "Menlo selected"} {
+		if strings.Contains(view, banned) {
+			t.Errorf("the inline sample must not claim to render the selected font: %q", banned)
+		}
+	}
+	// The theme code sample must not be reused for fonts.
+	if strings.Contains(view, "func Look(n int)") {
+		t.Error("the fonts pane should use the typography specimen, not the code sample")
+	}
+	// It stays truthful and complete at the compact size too.
+	m.SetSize(80, 24)
+	small := stripANSI(m.render())
+	assertGeometry(t, "fonts-compact", m.render(), 80, 24)
+	if !strings.Contains(small, "Inline uses your terminal font") {
+		t.Error("the compact fonts pane must keep the truthful note")
+	}
+	if !strings.Contains(small, "0 O o") {
+		t.Error("the compact fonts pane must keep the ambiguity row")
+	}
+}
+
+// TestFooterKeepsStatusVisibleWithLongStagedSummary protects the behaviour that
+// Saved/reload/error text is reserved before the staged summary.
+func TestFooterKeepsStatusVisibleWithLongStagedSummary(t *testing.T) {
+	m := loadedModel()
+	m.SetSize(80, 24)
+	long := core.Values{}
+	for i := range 12 {
+		long["very-long-setting-key-number-"+strconv.Itoa(i)] = []string{strings.Repeat("v", 20)}
+	}
+	m.stagePatch(long, "long patch")
+	m.say("Saved  ·  reload Ghostty ⌘⇧,  ·  u undo")
+	view := m.render()
+	assertGeometry(t, "long-summary", view, 80, 24)
+	plain := stripANSI(view)
+	if !strings.Contains(plain, "reload Ghostty") {
+		t.Fatalf("the status must survive a long staged summary:\n%s", plain)
+	}
+	if !strings.Contains(plain, "u undo") {
+		t.Fatal("the undo hint must survive a long staged summary")
+	}
+}
+
+// TestSpecimenHeadingIsReserved proves the heading owns its own row and never
+// overwrites a sample row, at every panel height.
+func TestSpecimenHeadingIsReserved(t *testing.T) {
+	pal := sampleTheme("nord", "Nord", false).Palette
+	for _, h := range []int{6, 7, 9, 12, 16, 22, 30} {
+		got := specimenText(pal, "Nord", 78, h)
+		assertGeometry(t, "specimen-heading", got, 78, h)
+		lines := strings.Split(got, "\n")
+		if len(lines) < 3 {
+			continue
+		}
+		if !strings.Contains(lines[1], "Nord") || !strings.Contains(lines[1], "SAMPLE") {
+			t.Errorf("h=%d: the first interior row must be the heading, got %q", h, lines[1])
+		}
+		// Compare the interior only: the frame's own border sits on the row.
+		if interior := strings.TrimSpace(strings.Trim(lines[2], "│ ")); interior != "" {
+			t.Errorf("h=%d: the heading must be followed by a blank row, got %q", h, interior)
+		}
+		// Semantic groups are whole: the code block and the diff are all-or-nothing.
+		if strings.Contains(got, "package studio") {
+			for _, want := range []string{"func Look(n int) []string {", "return theme.ANSI[:n]", "}"} {
+				if !strings.Contains(got, want) {
+					t.Errorf("h=%d: the code group is incomplete, missing %q", h, want)
+				}
+			}
+		}
+		if strings.Contains(got, "- background = #101518") != strings.Contains(got, "+ background = #1e1e2e") {
+			t.Errorf("h=%d: the diff group is incomplete:\n%s", h, got)
+		}
+		// Every interior row stays inside the frame: no wrapped samples.
+		for i, l := range lines {
+			if lipgloss.Width(l) != 78 {
+				t.Fatalf("h=%d: row %d is %d cells wide", h, i, lipgloss.Width(l))
+			}
+		}
+	}
+}
+
+// TestFullAlphabetSurvivesAtRoomierSizes pins the whole alphabet, not a prefix.
+func TestFullAlphabetSurvivesAtRoomierSizes(t *testing.T) {
+	m := loadedModel()
+	m.SetSectionByName("fonts")
+	m.SetSize(120, 36)
+	view := stripANSI(m.render())
+	if !strings.Contains(view, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+		t.Error("the uppercase alphabet must be complete")
+	}
+	if !strings.Contains(view, "abcdefghijklmnopqrstuvwxyz") {
+		t.Error("the lowercase alphabet must be complete")
+	}
+	// The compact pane keeps the heading, one alphabet line, the ambiguity row
+	// and one weight sample, and still states the caveat.
+	m.SetSize(80, 24)
+	small := stripANSI(m.render())
+	assertGeometry(t, "fonts-compact", m.render(), 80, 24)
+	for _, want := range []string{"abcdefghijklmnopqrstuvwxyz", "0 O o", "regular   The quick brown fox", "SAMPLE"} {
+		if !strings.Contains(small, want) {
+			t.Errorf("the compact type specimen should keep %q", want)
+		}
+	}
+	if !strings.Contains(small, "Inline uses your terminal font") {
+		t.Error("the compact pane must keep the truthful caveat")
+	}
+	if !strings.Contains(small, "Preview selected font in Ghostty") {
+		t.Error("the compact pane must keep the native preview action visible")
+	}
+}
+
+// TestThemePaneStatesSourceOnce protects the single source line beneath the
+// specimen, and the footer's sole ownership of contrast.
+func TestThemePaneStatesSourceOnce(t *testing.T) {
+	m := engineModel(t)
+	m.SetSectionByName("themes")
+	m.SetSize(120, 36)
+	view := stripANSI(m.render())
+	if n := strings.Count(view, "contrast"); n != 1 {
+		t.Errorf("contrast belongs to the footer only, found %d mentions", n)
+	}
+	if !strings.Contains(view, "i inspect palette") {
+		t.Error("the second info line should point at Inspect")
+	}
+	if m.pinned != "" {
+		return
+	}
+	// The pinned hint must describe the real, stacked comparison.
+	m.themes.Select(m.themes.Filtered()[0].ID)
+	m.togglePin()
+	m.themes.Move(2)
+	// A compact terminal cannot stack two specimens, so it states the real
+	// comparison instead of the old "side by side" claim.
+	m.SetSize(80, 24)
+	pinned := stripANSI(m.render())
+	if strings.Contains(pinned, "side by side") {
+		t.Error("the comparison is stacked, not side by side")
+	}
+	if !strings.Contains(pinned, "pinned ·") {
+		t.Error("the pinned specimen should be labelled")
+	}
+	if !strings.Contains(pinned, "stacks both specimens") {
+		t.Error("the compact hint should describe the stacked comparison")
+	}
+	// A roomy terminal stacks the two specimens for real.
+	m.SetSize(120, 36)
+	stacked := stripANSI(m.render())
+	if !strings.Contains(stacked, m.pinnedName()) {
+		t.Error("the pinned specimen should be visible when stacked")
+	}
+}

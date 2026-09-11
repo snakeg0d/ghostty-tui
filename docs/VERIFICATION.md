@@ -1,4 +1,18 @@
-# Ghostty Studio 0.2.0 — verification
+# Ghostty Studio — verification
+
+## 0.2.1 · visual refinement · 11 September 2026
+
+Installed to `~/.local/bin/ghostty-tui`; the installed binary matches the build. The palette browser now has separated swatches, adaptive two-line entries and a full-width selection rail. Stable ink/mint chrome, numbered tabs and keycaps give navigation clearer hierarchy. Fonts have a dedicated specimen with complete alphabets, ambiguity checks and three weight samples. Compact specimens use complete shorter phrases. Looks show meaningful composition values before raw configuration details. Nested ANSI resets now restore their enclosing background, keeping selections and modal surfaces continuous.
+
+`go test ./...`, `go vet ./...` and the UI race checks passed. New regression checks cover reserved specimen headings, intact sample groups, complete alphabets, compact frames, palette rhythm, roomy names, single favorite markers and visible save feedback. Geometry checks include 60×18, 80×24, 120×36 and larger terminals.
+
+Actual PTY acceptance at 120×36 covered theme search/stage/apply/undo, font search/staging, Help and dirty-quit cancel/discard. Undo restored the disposable config byte for byte. The installed binary was also exercised from `/tmp` at 80×24, including Help paging and quit. Both personal Ghostty config hashes remain unchanged. No fonts or personal settings were changed in this pass.
+
+The refreshed screenshots render the production Bubble Tea View through Charm Freeze with JetBrains Mono. Full and compact Themes, Fonts, Looks, Effects and Help, plus a light palette, were inspected. A fresh Astra peer reviewed the diff and frames, identified duplicate favorite markers and clipped Look subtitles, and confirmed both repairs. The existing native-window and shader-rendering limitations below still apply; these images are terminal renders, not photographs of a Ghostty window.
+
+Implementation reused the existing visible Herdr/OMP UI session with the verified exact `deepseek/deepseek-v4.1-flash` model, high effort, personal OpenRouter account. Astra owned design, render review, bounded integration corrections, PTY verification and installation. The native session, briefs, before/after images and PTY transcripts are retained under `.build/`.
+
+## 0.2.0 · original release
 
 11 September 2026 · macOS · Ghostty 1.3.1 (CoreText / Metal).
 

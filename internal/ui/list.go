@@ -10,7 +10,8 @@ import (
 
 // choiceList is the shared left-hand list: catalog order preserved, filtered by
 // a fuzzy query and an optional appearance filter, with favorites and
-// session-recent entries lifted to the top of their group.
+// session-recent entries lifted to the top of their group. Entries may occupy
+// one or two terminal rows.
 type choiceList struct {
 	section string
 	items   []core.Choice
@@ -23,15 +24,22 @@ type choiceList struct {
 	recent  []string
 	width   int
 	height  int
+	lines   int
 }
 
 func newChoiceList(section string) *choiceList {
-	return &choiceList{section: section, favs: map[string]bool{}}
+	return &choiceList{section: section, favs: map[string]bool{}, lines: 1}
 }
 
-func (l *choiceList) SetExtent(w, h int) {
+// SetExtent gives the list its exact cell budget and row height.
+func (l *choiceList) SetExtent(w, h, lines int) {
 	l.width, l.height = w, h
+	l.lines = clampInt(lines, 1, 2)
+	l.ensureVisible()
 }
+
+// cap is how many entries fit in the current extent.
+func (l *choiceList) cap() int { return max(l.height/l.lines, 1) }
 
 func (l *choiceList) SetItems(items []core.Choice) {
 	l.items = items
@@ -145,8 +153,7 @@ func (l *choiceList) MoveBottom() {
 }
 
 func (l *choiceList) HalfPage(dir int) {
-	step := max(l.height/2, 1)
-	l.Move(dir * step)
+	l.Move(dir * max(l.cap()/2, 1))
 }
 
 func (l *choiceList) ensureVisible() {
@@ -154,13 +161,14 @@ func (l *choiceList) ensureVisible() {
 		l.offset = 0
 		return
 	}
+	visible := l.cap()
 	if l.cursor < l.offset {
 		l.offset = l.cursor
 	}
-	if l.cursor >= l.offset+l.height {
-		l.offset = l.cursor - l.height + 1
+	if l.cursor >= l.offset+visible {
+		l.offset = l.cursor - visible + 1
 	}
-	if maxOff := len(l.view) - l.height; l.offset > maxOff {
+	if maxOff := len(l.view) - visible; l.offset > maxOff {
 		l.offset = max(maxOff, 0)
 	}
 	if l.offset < 0 {
@@ -173,7 +181,7 @@ func (l *choiceList) Visible() ([]core.Choice, int) {
 	if l.height <= 0 {
 		return nil, 0
 	}
-	end := min(l.offset+l.height, len(l.view))
+	end := min(l.offset+l.cap(), len(l.view))
 	return l.view[l.offset:end], l.offset
 }
 
@@ -232,46 +240,6 @@ func matchesQuery(query string, c core.Choice) bool {
 	return false
 }
 
-func orderChoices(items []core.Choice, favs map[string]bool, recent []string) []core.Choice {
-	if len(items) == 0 {
-		return nil
-	}
-	recentRank := make(map[string]int, len(recent))
-	for i, id := range recent {
-		recentRank[id] = i
-	}
-	var favsOut, recentOut, rest []core.Choice
-	for _, c := range items {
-		switch {
-		case favs[c.ID]:
-			favsOut = append(favsOut, c)
-		case isRecent(recentRank, c.ID):
-			recentOut = append(recentOut, c)
-		default:
-			rest = append(rest, c)
-		}
-	}
-	sortByRecent(recentOut, recentRank)
-	out := make([]core.Choice, 0, len(items))
-	out = append(out, favsOut...)
-	out = append(out, recentOut...)
-	out = append(out, rest...)
-	return out
-}
-
-func sortByRecent(items []core.Choice, rank map[string]int) {
-	for i := 1; i < len(items); i++ {
-		for j := i; j > 0 && rank[items[j-1].ID] > rank[items[j].ID]; j-- {
-			items[j-1], items[j] = items[j], items[j-1]
-		}
-	}
-}
-
-func isRecent(rank map[string]int, id string) bool {
-	_, ok := rank[id]
-	return ok
-}
-
 // fuzzyMatch reports whether every rune of query appears in target in order.
 func fuzzyMatch(query, target string) bool {
 	q := []rune(strings.ToLower(strings.TrimSpace(query)))
@@ -312,10 +280,50 @@ func matchIndexes(query, target string) []int {
 	return out
 }
 
+func orderChoices(items []core.Choice, favs map[string]bool, recent []string) []core.Choice {
+	if len(items) == 0 {
+		return nil
+	}
+	recentRank := make(map[string]int, len(recent))
+	for i, id := range recent {
+		recentRank[id] = i
+	}
+	var favsOut, recentOut, rest []core.Choice
+	for _, c := range items {
+		switch {
+		case favs[c.ID]:
+			favsOut = append(favsOut, c)
+		case isRecent(recentRank, c.ID):
+			recentOut = append(recentOut, c)
+		default:
+			rest = append(rest, c)
+		}
+	}
+	sortByRecent(recentOut, recentRank)
+	out := make([]core.Choice, 0, len(items))
+	out = append(out, favsOut...)
+	out = append(out, recentOut...)
+	out = append(out, rest...)
+	return out
+}
+
+func sortByRecent(items []core.Choice, rank map[string]int) {
+	for i := 1; i < len(items); i++ {
+		for j := i; j > 0 && rank[items[j-1].ID] > rank[items[j].ID]; j-- {
+			items[j-1], items[j] = items[j], items[j-1]
+		}
+	}
+}
+
+func isRecent(rank map[string]int, id string) bool {
+	_, ok := rank[id]
+	return ok
+}
+
 // rowOpts configures per-section row decoration.
 type rowOpts struct {
-	swatch bool
-	suffix func(core.Choice) string
+	swatch  bool
+	subtype func(core.Choice) string
 }
 
 // View renders exactly l.height rows of exactly l.width cells.
@@ -323,64 +331,149 @@ func (l *choiceList) View(st *styles, opts rowOpts) []string {
 	rows := make([]string, 0, l.height)
 	visible, offset := l.Visible()
 	for i, c := range visible {
-		rows = append(rows, l.row(st, c, offset+i == l.cursor, opts))
+		rows = append(rows, l.row(st, c, offset+i == l.cursor, opts)...)
 	}
 	for len(rows) < l.height {
 		rows = append(rows, strings.Repeat(" ", l.width))
 	}
-	return rows
+	return rows[:max(l.height, 0)]
 }
 
-func (l *choiceList) row(st *styles, c core.Choice, selected bool, opts rowOpts) string {
+// swatchPlan keeps the palette rhythm readable: a few separated swatches, never
+// a continuous barcode, and fewer of them when the column is narrow. Two-line
+// entries always show the full six.
+func swatchPlan(listW int) (count, cell, sep int) {
+	switch {
+	case listW >= 34:
+		return 6, 1, 1
+	case listW >= 30:
+		return 5, 1, 1
+	case listW >= 26:
+		return 4, 1, 1
+	default:
+		return 3, 1, 1
+	}
+}
+
+func (l *choiceList) row(st *styles, c core.Choice, selected bool, opts rowOpts) []string {
 	w := l.width
-	marker := " "
-	markStyle := st.Marker
 	rowStyle := st.Row
+	railStyle := st.Rail
+	subStyle := st.Sub
 	if selected {
-		marker = "▸"
-		markStyle = st.MarkerSel
 		rowStyle = st.RowSel
+		railStyle = st.RailOn
+		subStyle = st.SubSel
+	}
+	rail := railStyle.Render("▌")
+	if !selected {
+		rail = rowStyle.Render(" ")
+	}
+
+	star := l.star(st, c, selected)
+	starW := lipgloss.Width(star)
+
+	if l.lines >= 2 && opts.subtype != nil {
+		// Roomy entries: the name owns the first line, the palette and the
+		// entry's real subtype share the second. Nothing is drawn twice.
+		nameW := max(w-3-starW, 4)
+		shown := clipText(c.Name, nameW)
+		pad := max(w-2-lipgloss.Width(shown)-starW, 0)
+		first := rail + rowStyle.Render(" "+styleName(st, shown, l.query, selected)+strings.Repeat(" ", pad)) + star
+
+		swatches := l.swatches(st, c, selected)
+		head := " " + swatches
+		used := 1 + lipgloss.Width(swatches)
+		sub := opts.subtype(c)
+		meta := ""
+		if sub != "" {
+			meta = "  " + clipText(sub, max(w-used-3, 4))
+			used += lipgloss.Width(meta)
+		}
+		tail := strings.Repeat(" ", max(w-1-used, 0))
+		return []string{surfaceLine(rowStyle, first, w), surfaceLine(rowStyle, rail+rowStyle.Render(head)+subStyle.Render(meta)+rowStyle.Render(tail), w)}
 	}
 
 	right := ""
 	if opts.swatch {
-		right = swatch(c)
-	} else if opts.suffix != nil {
-		right = opts.suffix(c)
-	} else {
-		right = choiceGlyphs(c, l.favs[c.ID])
+		right = l.swatches(st, c, selected)
+	}
+	if star != "" {
+		if right != "" {
+			right += " "
+		}
+		right += star
 	}
 	rightW := lipgloss.Width(right)
+	gap := 0
+	if rightW > 0 {
+		gap = 1
+	}
+	nameW := max(w-3-rightW-gap, 4)
+	shown := clipText(c.Name, nameW)
+	pad := max(w-2-lipgloss.Width(shown)-rightW, 0)
+	return []string{surfaceLine(rowStyle, rail+rowStyle.Render(" "+styleName(st, shown, l.query, selected)+strings.Repeat(" ", pad))+right, w)}
+}
 
-	nameW := max(w-2-rightW-1, 4)
-	name := clipText(c.Name, nameW)
-	nameStyled := styleName(st, name, l.query, selected)
-	pad := strings.Repeat(" ", max(nameW-lipgloss.Width(name), 0))
+// star renders the favorite marker for a row.
+func (l *choiceList) star(st *styles, c core.Choice, selected bool) string {
+	if !l.favs[c.ID] {
+		return ""
+	}
+	if selected {
+		return st.StarSel.Render("★")
+	}
+	return st.Star.Render("★")
+}
 
-	line := markStyle.Render(marker) + rowStyle.Render(" "+nameStyled+pad+" ") + right
-	return fitLine(line, w)
+// swatchStrip renders the separated swatch group for a two-line entry.
+func (l *choiceList) swatchStrip(st *styles, c core.Choice, selected bool) string {
+	return l.swatches(st, c, selected)
+}
+
+// swatches renders separated one-cell square glyphs. Colored glyphs on the
+// chrome background break the continuous vertical barcode a solid block row
+// would create, and they read as swatches in every terminal.
+func (l *choiceList) swatches(st *styles, c core.Choice, selected bool) string {
+	count, _, sep := swatchPlan(l.width)
+	if l.lines >= 2 {
+		count = 6
+	}
+	p := choicePalette(c)
+	if p.Background == "" {
+		return ""
+	}
+	bg := colCanvas
+	if selected {
+		bg = colSlate
+	}
+	sepStyle := lipgloss.NewStyle().Background(bg)
+	parts := make([]string, 0, count)
+	for i := range count {
+		col, ok := parseHexColor(p.ANSI[1+i])
+		if !ok {
+			parts = append(parts, sepStyle.Render(" "))
+			continue
+		}
+		parts = append(parts, lipgloss.NewStyle().Foreground(col).Background(bg).Render("▪"))
+	}
+	return strings.Join(parts, sepStyle.Render(strings.Repeat(" ", sep)))
 }
 
 // styleName highlights fuzzy matches inside a row label.
 func styleName(st *styles, name, query string, selected bool) string {
 	base := st.Text
 	if selected {
-		base = st.RowSel
+		base = st.Text.Bold(true)
 	}
 	idx := matchIndexes(query, name)
 	if len(idx) == 0 {
 		return base.Render(name)
 	}
 	var b strings.Builder
-	runes := []rune(name)
-	next := 0
-	for i, r := range runes {
-		matched := next < len(idx) && idx[next] == i
-		if matched {
-			next++
-		}
-		if matched {
-			b.WriteString(st.Amber.Render(string(r)))
+	for i, r := range []rune(name) {
+		if containsIndex(idx, i) {
+			b.WriteString(st.Mint.Render(string(r)))
 			continue
 		}
 		b.WriteString(base.Render(string(r)))
@@ -388,37 +481,11 @@ func styleName(st *styles, name, query string, selected bool) string {
 	return b.String()
 }
 
-// choiceGlyphs renders compact status glyphs for a row.
-func choiceGlyphs(c core.Choice, fav bool) string {
-	var b strings.Builder
-	if fav {
-		b.WriteString("★")
-	} else {
-		b.WriteString(" ")
-	}
-	if c.Installed {
-		b.WriteString("•")
-	} else {
-		b.WriteString(" ")
-	}
-	return b.String()
-}
-
-// swatch renders 8 palette cells from a theme choice.
-func swatch(c core.Choice) string {
-	p := choicePalette(c)
-	if p.Background == "" {
-		return strings.Repeat(" ", 8)
-	}
-	var b strings.Builder
-	for i := 0; i < 8; i++ {
-		hex := p.ANSI[i]
-		col, ok := parseHexColor(hex)
-		if !ok {
-			b.WriteString(" ")
-			continue
+func containsIndex(idx []int, i int) bool {
+	for _, v := range idx {
+		if v == i {
+			return true
 		}
-		b.WriteString(lipgloss.NewStyle().Background(col).Render(" "))
 	}
-	return b.String()
+	return false
 }

@@ -36,6 +36,16 @@ func fitLine(s string, w int) string {
 	return s
 }
 
+// surfaceLine restores the enclosing surface after nested ANSI styles reset.
+// Lip Gloss v2 leaves those resets intact; without this, styled labels punch
+// holes in a selection or modal background. Explicit swatch colors stay intact.
+func surfaceLine(st lipgloss.Style, s string, w int) string {
+	base := ansi.Style{}.ForegroundColor(st.GetForeground()).BackgroundColor(st.GetBackground()).String()
+	s = fitLine(s, w)
+	s = strings.NewReplacer("\x1b[0m", "\x1b[0m"+base, "\x1b[m", "\x1b[m"+base).Replace(s)
+	return base + s + ansi.ResetStyle
+}
+
 // fitLines returns exactly h lines, each exactly w cells.
 func fitLines(lines []string, w, h int) []string {
 	out := make([]string, 0, max(h, 0))
@@ -87,6 +97,14 @@ func placeCenter(block string, w, h int) string {
 	}
 	block = strings.Join(lines, "\n")
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, block)
+}
+
+// padRight pads a plain or styled string to n cells when it is shorter.
+func padRight(s string, n int) string {
+	if w := ansi.StringWidth(s); w < n {
+		return s + strings.Repeat(" ", n-w)
+	}
+	return s
 }
 
 // clipText truncates a plain string to w cells with an ellipsis when needed.

@@ -9,44 +9,51 @@ import (
 	"ghostty.studio/internal/core"
 )
 
-// Brand palette: dark mineral canvas, ivory text, muted sage, amber accent.
-// Chrome colors never change when the specimen palette changes.
+// Palette: cool ink canvas, lifted slate, clear edges, warm ivory text, muted
+// secondary, pale mint accent, warm sand for staged state. Chrome never changes
+// when the specimen palette changes.
 var (
-	colCanvas    = lipgloss.Color("#101518")
-	colCanvasAlt = lipgloss.Color("#161e23")
-	colText      = lipgloss.Color("#e5e8df")
-	colIvoryDim  = lipgloss.Color("#b6bcb1")
-	colSage      = lipgloss.Color("#a8b9a5")
-	colAmber     = lipgloss.Color("#dab979")
-	colLine      = lipgloss.Color("#253136")
-	colLineSoft  = lipgloss.Color("#1a2328")
-	colSelect    = lipgloss.Color("#1d282e")
-	colErr       = lipgloss.Color("#d98b79")
+	colCanvas = lipgloss.Color("#11151e")
+	colSlate  = lipgloss.Color("#1b2230")
+	colEdge   = lipgloss.Color("#344052")
+	colEdgeLo = lipgloss.Color("#232d3b")
+	colText   = lipgloss.Color("#edf0e8")
+	colMuted  = lipgloss.Color("#9aa8b9")
+	colMint   = lipgloss.Color("#b8d6c1")
+	colSand   = lipgloss.Color("#e4c899")
+	colErr    = lipgloss.Color("#e0907c")
 )
 
-// styles holds every chrome style. Built once; the specimen uses its own
-// palette-derived styles so chrome stays stable.
+// styles holds every chrome style. The specimen carries its own palette-derived
+// styles so chrome stays quiet while the hero changes.
 type styles struct {
 	App        lipgloss.Style
 	Identity   lipgloss.Style
+	Diamond    lipgloss.Style
 	Descriptor lipgloss.Style
 	Version    lipgloss.Style
 	Tab        lipgloss.Style
 	TabActive  lipgloss.Style
 	TabIndex   lipgloss.Style
+	TabIndexOn lipgloss.Style
 	Rule       lipgloss.Style
 	RuleSoft   lipgloss.Style
 	Text       lipgloss.Style
 	Dim        lipgloss.Style
-	Sage       lipgloss.Style
-	Amber      lipgloss.Style
+	Mint       lipgloss.Style
+	Sand       lipgloss.Style
 	Err        lipgloss.Style
 	OK         lipgloss.Style
 	Row        lipgloss.Style
 	RowSel     lipgloss.Style
+	Rail       lipgloss.Style
+	RailOn     lipgloss.Style
 	Marker     lipgloss.Style
-	MarkerSel  lipgloss.Style
+	Sub        lipgloss.Style
+	SubSel     lipgloss.Style
 	Header     lipgloss.Style
+	Star       lipgloss.Style
+	StarSel    lipgloss.Style
 	Modal      lipgloss.Style
 	ModalSel   lipgloss.Style
 	ModalTitle lipgloss.Style
@@ -59,30 +66,37 @@ func newStyles() *styles {
 	return &styles{
 		App:        lipgloss.NewStyle().Background(colCanvas).Foreground(colText),
 		Identity:   lipgloss.NewStyle().Foreground(colText).Bold(true),
-		Descriptor: lipgloss.NewStyle().Foreground(colSage),
-		Version:    lipgloss.NewStyle().Foreground(colIvoryDim),
-		Tab:        lipgloss.NewStyle().Foreground(colIvoryDim),
-		TabActive:  lipgloss.NewStyle().Foreground(colAmber).Bold(true),
-		TabIndex:   lipgloss.NewStyle().Foreground(colSage),
-		Rule:       lipgloss.NewStyle().Foreground(colLine),
-		RuleSoft:   lipgloss.NewStyle().Foreground(colLineSoft),
+		Diamond:    lipgloss.NewStyle().Foreground(colMint),
+		Descriptor: lipgloss.NewStyle().Foreground(colMuted),
+		Version:    lipgloss.NewStyle().Foreground(colMuted),
+		Tab:        lipgloss.NewStyle().Foreground(colMuted),
+		TabActive:  lipgloss.NewStyle().Foreground(colCanvas).Background(colMint).Bold(true),
+		TabIndex:   lipgloss.NewStyle().Foreground(colMuted).Background(colSlate),
+		TabIndexOn: lipgloss.NewStyle().Foreground(colCanvas).Background(colMint).Bold(true),
+		Rule:       lipgloss.NewStyle().Foreground(colEdge),
+		RuleSoft:   lipgloss.NewStyle().Foreground(colEdgeLo),
 		Text:       lipgloss.NewStyle().Foreground(colText),
-		Dim:        lipgloss.NewStyle().Foreground(colIvoryDim),
-		Sage:       lipgloss.NewStyle().Foreground(colSage),
-		Amber:      lipgloss.NewStyle().Foreground(colAmber),
+		Dim:        lipgloss.NewStyle().Foreground(colMuted),
+		Mint:       lipgloss.NewStyle().Foreground(colMint),
+		Sand:       lipgloss.NewStyle().Foreground(colSand),
 		Err:        lipgloss.NewStyle().Foreground(colErr),
-		OK:         lipgloss.NewStyle().Foreground(colSage),
+		OK:         lipgloss.NewStyle().Foreground(colMint),
 		Row:        lipgloss.NewStyle().Foreground(colText).Background(colCanvas),
-		RowSel:     lipgloss.NewStyle().Foreground(colText).Background(colSelect),
-		Marker:     lipgloss.NewStyle().Foreground(colLine),
-		MarkerSel:  lipgloss.NewStyle().Foreground(colAmber).Background(colSelect),
-		Header:     lipgloss.NewStyle().Foreground(colSage),
-		Modal:      lipgloss.NewStyle().Background(colCanvasAlt).Foreground(colText),
-		ModalSel:   lipgloss.NewStyle().Background(colSelect).Foreground(colAmber).Bold(true),
-		ModalTitle: lipgloss.NewStyle().Foreground(colAmber).Bold(true),
-		Button:     lipgloss.NewStyle().Foreground(colIvoryDim).Background(colCanvasAlt).Padding(0, 2),
-		ButtonSel:  lipgloss.NewStyle().Foreground(colCanvas).Background(colAmber).Bold(true).Padding(0, 2),
-		Empty:      lipgloss.NewStyle().Foreground(colIvoryDim).Italic(true),
+		RowSel:     lipgloss.NewStyle().Foreground(colText).Background(colSlate),
+		Rail:       lipgloss.NewStyle().Foreground(colCanvas).Background(colCanvas),
+		RailOn:     lipgloss.NewStyle().Foreground(colMint).Background(colSlate),
+		Marker:     lipgloss.NewStyle().Foreground(colMuted),
+		Sub:        lipgloss.NewStyle().Foreground(colMuted).Background(colCanvas),
+		SubSel:     lipgloss.NewStyle().Foreground(colMuted).Background(colSlate),
+		Header:     lipgloss.NewStyle().Foreground(colMint),
+		Star:       lipgloss.NewStyle().Foreground(colSand).Background(colCanvas),
+		StarSel:    lipgloss.NewStyle().Foreground(colSand).Background(colSlate),
+		Modal:      lipgloss.NewStyle().Background(colSlate).Foreground(colText),
+		ModalSel:   lipgloss.NewStyle().Background(colEdge).Foreground(colText).Bold(true),
+		ModalTitle: lipgloss.NewStyle().Foreground(colMint).Bold(true),
+		Button:     lipgloss.NewStyle().Foreground(colMuted).Background(colSlate).Padding(0, 2),
+		ButtonSel:  lipgloss.NewStyle().Foreground(colCanvas).Background(colMint).Bold(true).Padding(0, 2),
+		Empty:      lipgloss.NewStyle().Foreground(colMuted).Italic(true),
 	}
 }
 

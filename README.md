@@ -54,6 +54,8 @@ The workflow shelf includes Quick Terminal, command notifications, working-direc
 
 The interface adapts to terminal size; 120 × 36 cells gives the specimen room to breathe. `?` reveals the keys relevant to your current screen.
 
+Roomy terminals show theme names above separated palette swatches; compact windows keep a single row per item. The [font specimen](docs/screenshots/fonts.png) exposes alphabets, ambiguous glyphs, weights and ligatures. [Looks](docs/screenshots/looks.png) show their font, size, padding and opacity together, while [Help](docs/screenshots/help.png) keeps its controls visible as you scroll.
+
 ## Saved means saved
 
 Browsing and staging do not change Ghostty. Apply validates through the installed Ghostty binary, backs up affected files, and appends a managed `studio.ghostty` include to the winning configuration. Comments, unknown settings, and existing include files are preserved. Source hashes prevent a stale edit from overwriting a change made elsewhere. Undo restores the previous files byte for byte and refuses to overwrite outside edits.

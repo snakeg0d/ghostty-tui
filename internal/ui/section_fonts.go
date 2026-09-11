@@ -6,33 +6,26 @@ import (
 	"ghostty.studio/internal/core"
 )
 
-// fontPane renders the typography specimen plus provenance for the focused
-// family. The inline specimen cannot change the terminal's own font, which the
-// pane states honestly.
+// fontPane renders the dedicated typography specimen. It never claims to
+// render the selected family inline: only Ghostty itself can do that.
 func (m *Model) fontPane(w, h int) []string {
-	c, _, ok := m.fontsOrDiscover().Selected()
+	st := m.styles
+	list := m.fontsOrDiscover()
+	c, _, ok := list.Selected()
 	title := "current typography"
 	if ok {
 		title = c.Name
 	}
 	pal := paletteFromValues(m.mergedValues())
-	rows := splitLines(renderSpecimen(specimenData{Title: title, Pal: pal}, w, max(h-6, 5), m.styles))
-
-	st := m.styles
-	note := "Sample uses your terminal font · p previews this family in Ghostty"
-	rows = append(rows, "", st.Dim.Render(clipText(note, max(w, 8))))
-
+	rows := splitLines(renderTypeSpecimen(specimenData{Title: title, Pal: pal}, w, max(h-4, 5), st))
+	rows = append(rows, "",
+		st.Dim.Render(clipText("Inline uses your terminal font", w)),
+		st.Mint.Render("p")+st.Dim.Render(" Preview selected font in Ghostty"),
+	)
 	if ok {
-		line := c.Source
-		if c.License != "" {
-			line = strings.TrimSpace(line + "  ·  " + c.License)
-		}
-		if line == "" {
-			line = c.Category
-		}
-		rows = append(rows, st.Sage.Render(clipText(line+"  ·  "+installHint(c), max(w, 8))))
+		rows = append(rows, st.Dim.Render(clipText(fontProvenance(c), w)))
 	} else {
-		rows = append(rows, st.Dim.Render("no font family selected"))
+		rows = append(rows, st.Dim.Render("no family selected"))
 	}
 	for len(rows) < h {
 		rows = append(rows, "")
@@ -47,14 +40,19 @@ func (m *Model) fontsOrDiscover() *choiceList {
 	return m.fonts
 }
 
-func installHint(c core.Choice) string {
-	if c.Installed {
-		return "installed"
+// fontProvenance states what the catalog actually knows about an entry. Core's
+// description already carries availability and style counts, so it is used as
+// the headline and never duplicated with another "installed" synonym.
+func fontProvenance(c core.Choice) string {
+	head := strings.TrimSpace(c.Description)
+	if head == "" {
+		if c.Installed {
+			head = "installed"
+		} else {
+			head = "not installed"
+		}
 	}
-	if c.URL != "" {
-		return "not installed"
-	}
-	return "available"
+	return strings.Join(nonEmpty([]string{head, c.License}), "  ·  ")
 }
 
 func (m *Model) toggleDiscover() {

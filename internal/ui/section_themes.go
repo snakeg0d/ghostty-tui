@@ -32,7 +32,9 @@ func (m *Model) themePane(w, h int) []string {
 
 	rows := splitLines(renderSpecimen(specimenData{Title: title, Pal: pal}, w, max(h-3, 5), m.styles))
 	if m.pinned != "" {
-		rows = append(rows, "", m.styles.Dim.Render("pinned · "+clipText(m.pinnedName(), max(w-10, 8))+"  (taller terminal compares side by side)"))
+		rows = append(rows, "",
+			m.styles.Dim.Render(clipText("pinned · "+m.pinnedName(), max(w, 8))),
+			m.styles.Dim.Render(clipText("a taller terminal stacks both specimens", max(w, 8))))
 		return rows
 	}
 	return append(rows, m.choiceInfoLines(c, ok, w)...)
@@ -59,34 +61,25 @@ func (m *Model) pinnedName() string {
 	return m.pinned
 }
 
-// choiceInfoLines renders provenance for the focused choice.
+// choiceInfoLines renders provenance for a theme. The footer already owns the
+// name, the light/dark class and the contrast, and core's own theme description
+// repeats them too, so this line adds the source and nothing else.
 func (m *Model) choiceInfoLines(c core.Choice, ok bool, w int) []string {
 	st := m.styles
 	if !ok || c.ID == "" {
 		return []string{"", st.Dim.Render("no selection")}
 	}
-	first := c.Source
-	if first == "" {
-		first = c.Category
+	source := c.Source
+	if source == "" {
+		source = c.Category
 	}
 	if c.License != "" {
-		first = strings.TrimSpace(first + "  ·  " + c.License)
-	}
-	second := c.Description
-	if c.URL != "" {
-		if second != "" {
-			second = strings.TrimSpace(second) + "  " + c.URL
-		} else {
-			second = c.URL
-		}
-	}
-	if len(c.Tags) > 0 {
-		second = strings.TrimSpace(second + "  ·  " + strings.Join(c.Tags, ", "))
+		source = strings.TrimSpace(source + "  ·  " + c.License)
 	}
 	return []string{
 		"",
-		st.Sage.Render(clipText(first, max(w, 8))),
-		st.Dim.Render(clipText(second, max(w, 8))),
+		st.Mint.Render(clipText(source, max(w, 8))),
+		st.Dim.Render(clipText("i inspect palette", max(w, 8))),
 	}
 }
 

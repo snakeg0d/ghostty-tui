@@ -78,7 +78,7 @@ func (m *Model) effectsPane(w, h int) []string {
 	rows := splitLines(renderSpecimen(specimenData{Title: title, Pal: paletteFromValues(m.mergedValues())}, w, max(h-4, 5), m.styles))
 	rows = append(rows, "")
 	if c, _, ok := m.effects.Selected(); ok {
-		rows = append(rows, st.Sage.Render(clipText(c.Name+" · "+c.Source, max(w, 8))))
+		rows = append(rows, st.Mint.Render(clipText(c.Name+" · "+c.Source, max(w, 8))))
 		rows = append(rows, st.Dim.Render(clipText(c.Description, max(w, 8))))
 	} else {
 		rows = append(rows, st.Dim.Render("no shaders discovered"))
@@ -211,7 +211,7 @@ func (m *Model) settingsPane(w, h int) []string {
 
 	rows := []string{
 		st.Text.Render(clipText(c.Name, max(w, 8))),
-		st.Sage.Render(clipText(strings.Join(nonEmpty([]string{s.Name, s.Group, s.Kind, reloadLabel(s.Reload)}), "  ·  "), max(w, 8))),
+		st.Mint.Render(clipText(strings.Join(nonEmpty([]string{s.Name, s.Group, s.Kind, reloadLabel(s.Reload)}), "  ·  "), max(w, 8))),
 		"",
 	}
 	rows = append(rows, wrapLines(c.Description, max(w, 8), 4)...)
@@ -326,7 +326,7 @@ func (m *Model) workflowsPane(w, h int) []string {
 	}
 	rows := []string{
 		st.Text.Render(clipText(c.Name, max(w, 8))),
-		st.Sage.Render(clipText(strings.TrimSpace(c.Source+"  ·  "+c.Category), max(w, 8))),
+		st.Mint.Render(clipText(strings.TrimSpace(c.Source+"  ·  "+c.Category), max(w, 8))),
 		"",
 	}
 	rows = append(rows, wrapLines(c.Description, max(w, 8), 4)...)
@@ -344,12 +344,12 @@ func (m *Model) workflowsPane(w, h int) []string {
 		case slices.Equal(cur, c.Values[k]):
 			note = "already matches"
 		default:
-			mark = st.Amber.Render("!")
+			mark = st.Sand.Render("!")
 			note = "overrides " + clipText(strings.Join(cur, " "), 18)
 		}
 		rows = append(rows, mark+" "+st.Text.Render(k)+st.Dim.Render("  "+note))
 		if next := strings.Join(c.Values[k], " "); next != "" {
-			rows = append(rows, "    "+st.Sage.Render(clipText(next, max(w-6, 6))))
+			rows = append(rows, "    "+st.Mint.Render(clipText(next, max(w-6, 6))))
 		}
 	}
 	rows = append(rows, "", st.Dim.Render(clipText("enter stages this patch · i inspects the full diff", max(w, 8))))
@@ -491,7 +491,7 @@ func (m *Model) exportPane(w, h int) []string {
 			lines = lines[:max(h-len(rows)-3, 1)]
 		}
 		for _, l := range lines {
-			rows = append(rows, st.Sage.Render(clipText(l, max(w, 8))))
+			rows = append(rows, st.Mint.Render(clipText(l, max(w, 8))))
 		}
 	}
 	rows = append(rows, "", st.Dim.Render(clipText("enter writes this to a file you choose · the CLI can print it to stdout", max(w, 8))))

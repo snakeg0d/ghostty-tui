@@ -116,15 +116,15 @@ func inputStyles() textinput.Styles {
 	var s textinput.Styles
 	mk := func(fg lipgloss.Style) textinput.StyleState {
 		return textinput.StyleState{
-			Text:        lipgloss.NewStyle().Foreground(colText).Background(colCanvasAlt),
-			Placeholder: lipgloss.NewStyle().Foreground(colIvoryDim).Background(colCanvasAlt),
-			Prompt:      fg.Background(colCanvasAlt),
-			Suggestion:  lipgloss.NewStyle().Foreground(colSage).Background(colCanvasAlt),
+			Text:        lipgloss.NewStyle().Foreground(colText).Background(colSlate),
+			Placeholder: lipgloss.NewStyle().Foreground(colMuted).Background(colSlate),
+			Prompt:      fg.Background(colSlate),
+			Suggestion:  lipgloss.NewStyle().Foreground(colMint).Background(colSlate),
 		}
 	}
-	s.Focused = mk(lipgloss.NewStyle().Foreground(colAmber))
-	s.Blurred = mk(lipgloss.NewStyle().Foreground(colIvoryDim))
-	s.Cursor = textinput.CursorStyle{Color: colAmber, Shape: tea.CursorBlock, Blink: true}
+	s.Focused = mk(lipgloss.NewStyle().Foreground(colMint))
+	s.Blurred = mk(lipgloss.NewStyle().Foreground(colMuted))
+	s.Cursor = textinput.CursorStyle{Color: colMint, Shape: tea.CursorBlock, Blink: true}
 	return s
 }
 
@@ -203,12 +203,12 @@ func renderModal(md *modal, st *styles, w, h int, busy bool, spinnerFrame string
 		focused := md.focusKind == 0 && i == md.fieldIdx
 		labelStyle := st.Dim
 		if focused {
-			labelStyle = st.Amber
+			labelStyle = st.Mint
 		}
 		content = append(content, labelStyle.Render(clipText(f.label, inner)))
 		view := f.input.View()
 		if focused {
-			view = st.Amber.Render("❯") + " " + view
+			view = st.Mint.Render("❯") + " " + view
 		} else {
 			view = st.Dim.Render(" ") + " " + view
 		}
@@ -242,7 +242,7 @@ func renderModal(md *modal, st *styles, w, h int, busy bool, spinnerFrame string
 	contentLines := fitLines(content, inner, boxH-2)
 	built := []string{st.Rule.Render("╭" + strings.Repeat("─", inner+2) + "╮")}
 	for _, l := range contentLines {
-		built = append(built, st.Rule.Render("│")+" "+st.Modal.Width(inner).MaxWidth(inner).Render(l)+" "+st.Rule.Render("│"))
+		built = append(built, st.Rule.Render("│")+surfaceLine(st.Modal, " "+l+" ", inner+2)+st.Rule.Render("│"))
 	}
 	built = append(built, st.Rule.Render("╰"+strings.Repeat("─", inner+2)+"╯"))
 

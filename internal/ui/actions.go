@@ -390,7 +390,7 @@ func (m *Model) openHelp() {
 			if h.Key == "" || h.Desc == "" {
 				continue
 			}
-			body = append(body, st.Sage.Render(padRight(h.Key, 16))+st.Text.Render(h.Desc))
+			body = append(body, st.Mint.Render(padRight(h.Key, 16))+st.Text.Render(h.Desc))
 		}
 		body = append(body, "")
 	}
@@ -421,7 +421,7 @@ func (m *Model) openInspect() {
 	c, _, ok := m.activeList().Selected()
 	body := []string{}
 	if ok {
-		body = append(body, st.Amber.Render(c.Name))
+		body = append(body, st.Mint.Render(c.Name))
 		body = append(body, st.Dim.Render("id      "+c.ID))
 		if c.Source != "" {
 			body = append(body, st.Dim.Render("source  "+c.Source))
@@ -437,7 +437,7 @@ func (m *Model) openInspect() {
 		}
 		body = append(body, "")
 		if len(c.Values) > 0 {
-			body = append(body, st.Sage.Render("values this choice stages"))
+			body = append(body, st.Mint.Render("values this choice stages"))
 			for _, k := range stagedKeys(c.Values) {
 				body = append(body, st.Text.Render("  "+k+" = "+clipText(strings.Join(c.Values[k], " "), 60)))
 			}
@@ -446,7 +446,7 @@ func (m *Model) openInspect() {
 	}
 
 	if m.dirty() {
-		body = append(body, st.Sage.Render("diff of staged changes"))
+		body = append(body, st.Mint.Render("diff of staged changes"))
 		ch := core.Change{Values: cloneValues(m.staged), Revision: m.stagedRev, Label: m.stagedFor}
 		diff := ""
 		if m.engine != nil {
@@ -463,7 +463,7 @@ func (m *Model) openInspect() {
 				case strings.HasPrefix(l, "-"):
 					style = st.Err
 				case strings.HasPrefix(l, "@"):
-					style = st.Sage
+					style = st.Mint
 				}
 				body = append(body, style.Render(l))
 			}
@@ -473,7 +473,7 @@ func (m *Model) openInspect() {
 		body = append(body, st.Dim.Render("nothing staged yet"), "")
 	}
 
-	body = append(body, st.Sage.Render("config sources"))
+	body = append(body, st.Mint.Render("config sources"))
 	if len(m.state.Sources) == 0 {
 		body = append(body, st.Dim.Render("  (none reported)"))
 	}
@@ -485,7 +485,7 @@ func (m *Model) openInspect() {
 	}
 	if m.lastDetail != "" {
 		body = append(body, "",
-			st.Sage.Render("last transaction"),
+			st.Mint.Render("last transaction"),
 			st.Dim.Render(clipText(m.lastDetail, 100)))
 	}
 	m.infoModal("Inspect", "staged diff, provenance and configuration sources", body)
@@ -498,7 +498,7 @@ func (m *Model) openTune() {
 	ids := make([]string, 0, len(keys))
 	for _, k := range keys {
 		s, _ := m.settingByKey(k)
-		items = append(items, st.Text.Render(padRight(k, 24))+st.Sage.Render(clipText(m.currentSettingValue(k), 24))+"  "+st.Dim.Render(s.Kind))
+		items = append(items, st.Text.Render(padRight(k, 24))+st.Mint.Render(clipText(m.currentSettingValue(k), 24))+"  "+st.Dim.Render(s.Kind))
 		ids = append(ids, k)
 	}
 	md := &modal{
@@ -767,12 +767,12 @@ func (m *Model) openInstallReview() {
 		return
 	}
 	body := []string{
-		st.Amber.Render(c.Name),
+		st.Mint.Render(c.Name),
 		"",
-		st.Sage.Render("source    ") + st.Text.Render(orDash(c.Source)),
-		st.Sage.Render("license   ") + st.Text.Render(orDash(c.License)),
-		st.Sage.Render("homepage  ") + st.Text.Render(orDash(c.URL)),
-		st.Sage.Render("installs  ") + st.Text.Render("Homebrew cask, into your user font directory"),
+		st.Mint.Render("source    ") + st.Text.Render(orDash(c.Source)),
+		st.Mint.Render("license   ") + st.Text.Render(orDash(c.License)),
+		st.Mint.Render("homepage  ") + st.Text.Render(orDash(c.URL)),
+		st.Mint.Render("installs  ") + st.Text.Render("Homebrew cask, into your user font directory"),
 		"",
 		st.Dim.Render("Homebrew keeps ownership and upstream notices."),
 		st.Dim.Render("Nothing changes in your config until you apply a font."),

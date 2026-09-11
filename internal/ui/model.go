@@ -95,7 +95,7 @@ type Model struct {
 
 // New builds the studio model around an opened core engine.
 func New(engine *core.Engine, opts core.Options) *Model {
-	sp := spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(lipgloss.NewStyle().Foreground(colAmber)))
+	sp := spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(lipgloss.NewStyle().Foreground(colMint)))
 	si := textinput.New()
 	si.Prompt = ""
 	si.Placeholder = "search themes, ids, tags…"
@@ -136,13 +136,13 @@ func New(engine *core.Engine, opts core.Options) *Model {
 
 func helpStyles() help.Styles {
 	s := help.DefaultDarkStyles()
-	s.ShortKey = lipgloss.NewStyle().Foreground(colSage)
-	s.ShortDesc = lipgloss.NewStyle().Foreground(colIvoryDim)
-	s.ShortSeparator = lipgloss.NewStyle().Foreground(colLine)
-	s.Ellipsis = lipgloss.NewStyle().Foreground(colIvoryDim)
-	s.FullKey = lipgloss.NewStyle().Foreground(colSage)
-	s.FullDesc = lipgloss.NewStyle().Foreground(colIvoryDim)
-	s.FullSeparator = lipgloss.NewStyle().Foreground(colLine)
+	s.ShortKey = lipgloss.NewStyle().Foreground(colMint).Background(colSlate).Padding(0, 1)
+	s.ShortDesc = lipgloss.NewStyle().Foreground(colMuted)
+	s.ShortSeparator = lipgloss.NewStyle().Foreground(colEdge)
+	s.Ellipsis = lipgloss.NewStyle().Foreground(colMuted)
+	s.FullKey = lipgloss.NewStyle().Foreground(colMint)
+	s.FullDesc = lipgloss.NewStyle().Foreground(colMuted)
+	s.FullSeparator = lipgloss.NewStyle().Foreground(colEdge)
 	return s
 }
 
@@ -325,15 +325,18 @@ func (m *Model) layout() {
 	listW := m.listWidth()
 	bodyH := m.bodyHeight()
 	height := max(bodyH-m.moreHeaderLines(), 1)
-	m.themes.SetExtent(listW, height)
-	m.fonts.SetExtent(listW, height)
-	m.discover.SetExtent(listW, height)
-	m.looks.SetExtent(listW, height)
-	m.effects.SetExtent(listW, height)
-	m.workflows.SetExtent(listW, height)
-	m.settingsL.SetExtent(listW, height)
-	m.health.SetExtent(listW, height)
-	m.exports.SetExtent(listW, height)
+	// Roomy terminals give the browser two-line entries; the other lists stay
+	// single-line so their dense reference text remains scannable.
+	rows := m.rowLines()
+	m.themes.SetExtent(listW, height, rows)
+	m.fonts.SetExtent(listW, height, rows)
+	m.discover.SetExtent(listW, height, rows)
+	m.looks.SetExtent(listW, height, rows)
+	m.effects.SetExtent(listW, height, 1)
+	m.workflows.SetExtent(listW, height, 1)
+	m.settingsL.SetExtent(listW, height, 1)
+	m.health.SetExtent(listW, height, 1)
+	m.exports.SetExtent(listW, height, 1)
 }
 
 func (m *Model) headerHeight() int { return 6 }
@@ -351,9 +354,9 @@ func (m *Model) listWidth() int {
 	case m.width >= 110:
 		return 34
 	case m.width >= 96:
-		return 30
+		return 32
 	case m.width >= 76:
-		return 27
+		return 29
 	default:
 		return 24
 	}
