@@ -1,5 +1,5 @@
 <!-- workbench:begin (managed by ~/dev/tools/workbench/sync-rules; edit the sources, not this block) -->
-Venture: Personal (personal in snakeg0d/dev projects.yaml). Project: Personal · Ghostty TUI (snakeg0d/ghostty-tui, software, paused). Hub: snakeg0d/personal-workspace. Ritual: no.
+Venture: Personal (personal in snakeg0d/dev projects.yaml). Project: Personal · Ghostty TUI (snakeg0d/ghostty-tui, paused). Hub: snakeg0d/personal-workspace. Ritual: no.
 
 ## Workbench rules (copied from snakeg0d/dev AGENTS.md)
 
@@ -26,4 +26,6 @@ The Personal venture: Daniel's own projects, owner snakeg0d. This repo is its hu
 
 - The workbench rules apply as written; nothing venture-specific yet.
 - `career/` holds local-only material (ignored); it does not go to GitHub.
+
+Place: Personal › Apps › Ghostty TUI (paused). Hub: snakeg0d/personal-workspace. New unsorted work: ~/dev/inbox; new project: wb new personal <area> <repo>.
 <!-- workbench:end -->
