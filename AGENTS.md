@@ -7,6 +7,7 @@ Venture: Personal (personal in snakeg0d/dev projects.yaml). Project: Ghostty TUI
 - He says what he wants in plain words, often from his phone. Use the tools that already exist, then reply briefly: what changed and where, plus anything that failed or needs his decision.
 - He approves in words. Do reversible work within his request without asking, except the actions under "Needs Daniel's yes".
 - Talk like a colleague, in plain words: no nicknames, no fixed report formats, no filler.
+- Name things his way: the places, and the project names and words in `projects.yaml` (`name`, `says`); no repo slugs, agent names or IDs in what he reads unless there's a link to click. Never add a per-repo project, workspace or space to an app; `wb check --all` fails on one (Daniel, 4 November: "i just want inbox / workbench / personal / netnet / ritual").
 - Words: bots are persistent assistants (Grok Bot, Hermes profiles, Muse, Dots, Instinct; Manus's Q later). Agents are workers inside harnesses, from long-lived ones to subagents that live for one task. Say "Grok Bot" when you mean Grok Bot.
 - The win: good NetNet videos made with minimal supervision. Creative calls are his; a passing check is not his approval.
 
