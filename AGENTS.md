@@ -1,5 +1,5 @@
 <!-- workbench:begin (managed by ~/dev/tools/workbench/sync-rules; edit the sources, not this block) -->
-Venture: Personal (personal in snakeg0d/dev projects.yaml). Project: Personal · Ghostty TUI (snakeg0d/ghostty-tui, paused). Hub: snakeg0d/personal-workspace. Ritual: no.
+Venture: Personal (personal in snakeg0d/dev projects.yaml). Project: Ghostty TUI (snakeg0d/ghostty-tui, paused). Hub: snakeg0d/personal-workspace. Ritual: no.
 
 ## Workbench rules (copied from snakeg0d/dev AGENTS.md)
 
@@ -22,10 +22,20 @@ Load secrets from Keychain (`tools/auth/keychain-env.sh`; names in `docs/provide
 
 ## Personal
 
-The Personal venture: Daniel's own projects, owner snakeg0d. This repo is its hub: venture rules, `STATE.md` and records. Projects: `vault` (shared agent memory, knowledge), `paper` (The Morning Paper, paused), `ghostty-tui` (paused). Registry: `~/dev/projects.yaml`; model: `~/dev/docs/architecture/MODEL.md`.
+Personal is the place Daniel sees for his own projects (owner snakeg0d); this repo is its hub (venture rules, `STATE.md`, records; model: `~/dev/docs/architecture/MODEL.md`). A chat in Personal coordinates; the work lands in the repo that owns it: open that repo, or your own worktree under `~/dev/worktrees`, and before working in it read its `AGENTS.md`; put branches, issues and pull requests there, then report back in the Personal chat. The hub's own pull-request and worktree buttons act on the hub only.
 
-- The workbench rules apply as written; nothing venture-specific yet.
-- `career/` holds local-only material (ignored); it does not go to GitHub.
+### What you can ask for here
 
-Place: Personal › Apps › Ghostty TUI (paused). Hub: snakeg0d/personal-workspace. New unsorted work: ~/dev/inbox; new project: wb new personal <area> <repo>.
+In Daniel's words (names and words from `~/dev/projects.yaml`; stages: `~/dev/projects/README.md`). Paths are under `/Users/danielgosek/dev/projects/personal/` (Hetzner: `/home/shed/dev/projects/personal/`).
+
+| He says | Project | Where |
+|---|---|---|
+| vault, obsidian | Vault: the agents' shared memory and his notes (private) | `vault/` (`snakeg0d/vault`) |
+| morning paper, the paper | Morning paper: his daily paper, written by his bots and agents | `apps/paper/` (`snakeg0d/paper`) |
+| ghostty, ghostty tui, ghostty studio | Ghostty TUI: keyboard-driven config for the Ghostty terminal | `apps/ghostty-tui/` (`snakeg0d/ghostty-tui`) |
+
+- The workbench rules (`~/dev/AGENTS.md`) apply as written; Personal adds nothing beyond this routing.
+- The hub's `career/` holds local-only material (ignored); it does not go to GitHub.
+
+Place: Personal › Apps › Ghostty TUI (paused). Daniel says: ghostty, ghostty tui, ghostty studio. Hub: snakeg0d/personal-workspace. New unsorted work: ~/dev/inbox; new project: wb new personal <area> <repo>.
 <!-- workbench:end -->
